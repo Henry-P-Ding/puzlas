@@ -1,7 +1,7 @@
 import pygame as pg
 from player import *
 from controls import *
-
+from wall import *
 
 class Game:
     def __init__(self, window_size, fps):
@@ -20,9 +20,12 @@ class Game:
 
         # all sprites to be rendered
         self.all_sprites = pg.sprite.RenderUpdates()
+        self.walls = pg.sprite.Group()
         self.background = pg.Surface([window_size[0], window_size[1]])
         self.background.fill((0, 0, 0))
-        self.player = Player(self.all_sprites)
+        self.player = Player(self.all_sprites, self)
+        self.wall = Wall(self.all_sprites)
+        self.walls.add(self.wall)
 
     def start(self):
         """Initialize the start of the game"""
@@ -69,5 +72,5 @@ class Game:
         pass
 
 
-game = Game((852, 480), 60)
+game = Game((896, 640), 60)
 game.start()
