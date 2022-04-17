@@ -1,10 +1,12 @@
-import pygame as pg
 from player import *
 from controls import *
-from wall import *
+from level_creator import *
+
 
 class Game:
+    """Main game class containing all game-related objects"""
     def __init__(self, window_size, fps):
+        # tuple for window size
         self.window_size = window_size
         # pygame surface for display window
         self.screen = pg.display.set_mode(self.window_size)
@@ -14,6 +16,8 @@ class Game:
 
         # control class to store game controls and associated actions
         self.controls = Controls(self).get_controls()
+        self.level_creator = LevelCreator(self)
+        self.tile_size = 64
 
         # game state: game is running
         self.running = False
@@ -21,16 +25,29 @@ class Game:
         # all sprites to be rendered
         self.all_sprites = pg.sprite.RenderUpdates()
         self.walls = pg.sprite.Group()
+        self.enemies = pg.sprite.Group()
+        self.player = Player(self.all_sprites, self)
+
+        # game background
         self.background = pg.Surface([window_size[0], window_size[1]])
         self.background.fill((0, 0, 0))
-        self.player = Player(self.all_sprites, self)
-        self.wall = Wall(self.all_sprites)
-        self.walls.add(self.wall)
 
     def start(self):
         """Initialize the start of the game"""
         self.running = True
         pg.init()
+        # example level
+        self.level_creator.create_level(self.level_creator.load_from_string(
+"""############
+#    M     #
+#          #
+#    ##    #
+#    ##    #
+#    ##    #
+#    ##    #
+#          #
+#          #
+############"""))
         self.loop()
 
     def loop(self):
@@ -72,5 +89,5 @@ class Game:
         pass
 
 
-game = Game((896, 640), 60)
+game = Game((768, 640), 60)
 game.start()
