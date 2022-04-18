@@ -37,17 +37,7 @@ class Game:
         self.running = True
         pg.init()
         # example level
-        self.level_creator.create_level(self.level_creator.load_from_string(
-"""############
-#    M     #
-#          #
-#    ##    #
-#    ##    #
-#    ##    #
-#    ##    #
-#          #
-#          #
-############"""))
+        self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
         self.loop()
 
     def loop(self):
