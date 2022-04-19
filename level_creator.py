@@ -7,6 +7,7 @@ class LevelCreator:
     """
     def __init__(self, game):
         self.game = game
+        self.level = None
         # dict associating string tile key with level creator method to place object in-game
         self.LEVEL_KEY = {
             "#": self.place_wall,
@@ -24,6 +25,7 @@ class LevelCreator:
                 tile = level_data[tile_y][tile_x]
                 if not self.LEVEL_KEY.get(tile) is None:
                     self.LEVEL_KEY[level_data[tile_y][tile_x]](tile_x, tile_y)
+        self.level = level_data
 
     def load_from_file(self, path):
         #TODO: implement file saving

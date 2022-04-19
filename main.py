@@ -39,14 +39,14 @@ class Game:
         # example level
         self.level_creator.create_level(self.level_creator.load_from_string(
 """############
-#    M     #
-#          #
-#    ##    #
-#    ##    #
-#    ##    #
-#    ##    #
-#          #
-#          #
+#M#   #    #
+# # # # #  #
+# # # # #  #
+# # # # #  #
+# # # # #  #
+# # # # #  #
+# # # # #  #
+#   #   # P#
 ############"""))
         self.loop()
 
