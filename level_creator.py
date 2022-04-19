@@ -27,10 +27,12 @@ class LevelCreator:
                     self.LEVEL_KEY[level_data[tile_y][tile_x]](tile_x, tile_y)
         self.level = level_data
 
-    def load_from_file(self, path):
+    def load_from_file(self,path):
         #TODO: implement file saving
         """Loads Level Data from a Text-File"""
-        pass
+        with open(path) as m:
+            contents = m.read()
+            return self.load_from_string(contents)
 
     def load_from_string(self, level_string):
         """Creates 2D array of characters from single string with newlines."""
