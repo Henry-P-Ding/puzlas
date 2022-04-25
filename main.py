@@ -1,7 +1,8 @@
 from player import *
 from controls import *
 from level_creator import *
-
+import pygame_menu
+from pygame_menu.examples import create_example_window
 
 class Game:
     """Main game class containing all game-related objects"""
@@ -93,6 +94,20 @@ class Game:
         """Behavior for the end of the game."""
         pass
 
+surface = create_example_window('puzlas', (600, 400))
+def start_the_game():
+    game.start()
+
+menu = pygame_menu.Menu(
+    height=300,
+    theme=pygame_menu.themes.THEME_BLUE,
+    title='Welcome',
+    width=400
+)
+menu.add.button('Play', start_the_game)
+menu.add.button('Quit', pygame_menu.events.EXIT)
+
 
 game = Game((768, 640), 60)
+menu.mainloop(surface)
 game.start()
