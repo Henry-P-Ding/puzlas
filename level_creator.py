@@ -1,13 +1,16 @@
 from wall import *
 from enemy import *
 
+
 class LevelCreator:
     """
     Populates the level of a game given an input string.
     """
-    def __init__(self, game):
+    def __init__(self, game, stage):
         self.game = game
         self.level = None
+        # a specific subsection within the level that the player engages in
+        self.stage = stage
         # dict associating string tile key with level creator method to place object in-game
         self.LEVEL_KEY = {
             "#": self.place_wall,
@@ -20,21 +23,22 @@ class LevelCreator:
         Arguments
         level_data: 2D python array of level tiles
         """
-        for tile_y in range(len(level_data)):
-            for tile_x in range(len(level_data[tile_y])):
-                tile = level_data[tile_y][tile_x]
+        for tile_y in range(self.game.tile_dim[1]):
+            for tile_x in range(self.game.tile_dim[0]):
+                tile = level_data[int(self.stage.y) * self.game.tile_dim[1] + tile_y][int(self.stage.x) *
+                                                                                      self.game.tile_dim[0] + tile_x]
                 if not self.LEVEL_KEY.get(tile) is None:
-                    self.LEVEL_KEY[level_data[tile_y][tile_x]](tile_x, tile_y)
+                    self.LEVEL_KEY[tile](tile_x, tile_y)
         self.level = level_data
 
-    def load_from_file(self,path):
-        #TODO: implement file saving
+    def load_from_file(self, path):
         """Loads Level Data from a Text-File"""
         with open(path) as m:
             contents = m.read()
             return self.load_from_string(contents)
 
-    def load_from_string(self, level_string):
+    @staticmethod
+    def load_from_string(level_string):
         """Creates 2D array of characters from single string with newlines."""
         return level_string.split("\n")
 
@@ -45,9 +49,11 @@ class LevelCreator:
 
     def place_player(self, tile_x, tile_y):
         """Places player object at tile location."""
-        self.game.player.pos = Vector2((2 * tile_x + 1) / 2 * self.game.tile_size, (2 * tile_y + 1) / 2 * self.game.tile_size)
+        self.game.player.pos = Vector2((2 * tile_x + 1) / 2 * self.game.tile_size,
+                                       (2 * tile_y + 1) / 2 * self.game.tile_size)
 
     def place_melee(self, tile_x, tile_y):
-        """Places enemies object at tile locatin."""
+        """Places enemies object at tile location."""
         self.game.enemies.add(Melee(self.game.all_sprites, self.game,
-                                    Vector2((2 * tile_x + 1) / 2 * self.game.tile_size, (2 * tile_y + 1) / 2 * self.game.tile_size), (48, 64), 10, 1, 100))
+                                    Vector2((2 * tile_x + 1) / 2 * self.game.tile_size,
+                                            (2 * tile_y + 1) / 2 * self.game.tile_size), (48, 64), 10, 3, 100))

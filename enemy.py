@@ -44,24 +44,24 @@ class Enemy(pg.sprite.Sprite):
         """
         displacement = (new_pos - self.pos)
         if max_dist is None:
-            if min_dist * min_dist < displacement.magnitude_squared():
+            if min_dist * min_dist < (self.game.player.pos - self.pos).magnitude_squared():
                 self.dir = displacement.normalize()
         else:
-            if min_dist * min_dist < displacement.magnitude_squared() < max_dist * max_dist:
+            if min_dist * min_dist < (self.game.player.pos - self.pos).magnitude_squared() < max_dist * max_dist:
                 self.dir = displacement.normalize()
 
-    def path_find_to_player(self, min_dist=0, max_dist=None):
+    def path_find_to_player(self):
         """Pathfinding towards player with BFS"""
         # get positions of player and enemy in tile format
         pos_tile = self.pos // self.game.tile_size
-        player_tile = self.game.player.pos // self.game.tile_size
+        player_tile = Vector2(self.game.player.pos.x % self.game.window_size[0], self.game.player.pos.y % self.game.window_size[1]) // self.game.tile_size
         # TODO: note that all levels have to be rectangular
         # dimensions of the level
-        level_size = (len(self.game.level_creator.level[0]), len(self.game.level_creator.level))
+        level_size = self.game.tile_dim
 
         # bfs algorithm to pathfinding
-        visited = [[False for x in range(level_size[0])] for y in range(level_size[1])]
-        self.tile_dist = [[-1 for x in range(level_size[0])] for y in range(level_size[1])]
+        visited = [[False for _ in range(level_size[0])] for _ in range(level_size[1])]
+        self.tile_dist = [[-1 for _ in range(level_size[0])] for _ in range(level_size[1])]
         moves = [Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)]
         queue = [pos_tile]
         visited[int(pos_tile.y)][int(pos_tile.x)] = True
@@ -72,10 +72,11 @@ class Enemy(pg.sprite.Sprite):
                 u = v + move
 
                 # check if is in boundary
-                if self.game.level_creator.level[int(u.y)][int(u.x)] == "#":
+                if self.game.level_creator.level[int(self.game.level_creator.stage.y * self.game.tile_dim[1] + u.y)][int(self.game.level_creator.stage.x * self.game.tile_dim[0] + u.x)] == "#":
                     continue
 
-                if 0 < u.x < level_size[0] and 0 < u.y < level_size[1] and not visited[int(u.y)][int(u.x)] and self.tile_dist[int(u.y)][int(u.x)] == -1:
+                if 0 < u.x < level_size[0] and 0 < u.y < level_size[1] and not visited[int(u.y)][int(u.x)] and \
+                        self.tile_dist[int(u.y)][int(u.x)] == -1:
                     queue.append(u)
                     visited[int(u.y)][int(u.x)] = True
                     self.tile_dist[int(u.y)][int(u.x)] = self.tile_dist[int(v.y)][int(v.x)] + 1
@@ -87,7 +88,7 @@ class Enemy(pg.sprite.Sprite):
         while self.tile_dist[int(v.y)][int(v.x)] > 1:
             for move in moves:
                 u = v + move
-                if self.game.level_creator.level[int(u.y)][int(u.x)] == "#":
+                if self.game.level_creator.level[int(self.game.level_creator.stage.y * self.game.tile_dim[1] + u.y)][int(self.game.level_creator.stage.x * self.game.tile_dim[0] + u.x)] == "#":
                     continue
 
                 if self.tile_dist[int(u.y)][int(u.x)] == self.tile_dist[int(v.y)][int(v.x)] - 1:
@@ -129,17 +130,25 @@ class Enemy(pg.sprite.Sprite):
 
 
 class Melee(Enemy):
-    def __init__(self, group, game, pos, size, steering_rate, speed, range):
+    """
+    Melee enemy class that can attack the player within a certain melee range.
+    """
+    def __init__(self, group, game, pos, size, steering_rate, speed, melee_range):
         super().__init__(group, game, pos, size, steering_rate, speed)
-        self.range = range
+        # range of melee attacks in pixels
+        self.melee_range = melee_range
 
     def update(self):
+        # pathfinds to the player
         self.path_find_to_player()
+        # steer towards nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
-            self.steer(self.pathing_nodes[0] * self.game.tile_size + Vector2(self.game.tile_size / 2, self.game.tile_size / 2))
+            self.steer(self.pathing_nodes[0] * self.game.tile_size +
+                       Vector2(self.game.tile_size / 2, self.game.tile_size / 2), min_dist=self.melee_range)
         self.move()
         self.attack()
 
     def attack(self):
-        if (self.pos - self.game.player.pos).magnitude_squared() < self.range * self.range:
+        """Attacks player within a certain range."""
+        if (self.pos - self.game.player.pos).magnitude_squared() < self.melee_range * self.melee_range:
             print("melee attack!")

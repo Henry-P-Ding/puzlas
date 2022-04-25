@@ -8,6 +8,8 @@ class Game:
     def __init__(self, window_size, fps):
         # tuple for window size
         self.window_size = window_size
+        self.tile_size = 64
+        self.tile_dim = int(self.window_size[0] / self.tile_size), int(self.window_size[1] / self.tile_size)
         # pygame surface for display window
         self.screen = pg.display.set_mode(self.window_size)
         self.fps = fps
@@ -16,8 +18,7 @@ class Game:
 
         # control class to store game controls and associated actions
         self.controls = Controls(self).get_controls()
-        self.level_creator = LevelCreator(self)
-        self.tile_size = 64
+        self.level_creator = LevelCreator(self, Vector2(0, 0))
 
         # game state: game is running
         self.running = False
@@ -37,17 +38,7 @@ class Game:
         self.running = True
         pg.init()
         # example level
-        self.level_creator.create_level(self.level_creator.load_from_string(
-"""############
-#M#   #    #
-# # # # #  #
-# # # # #  #
-# # # # #  #
-# # # # #  #
-# # # # #  #
-# # # # #  #
-#   #   # P#
-############"""))
+        self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
         self.loop()
 
     def loop(self):
@@ -75,6 +66,20 @@ class Game:
     def update(self):
         """Updates all game objects based on input."""
         self.all_sprites.update()
+
+        # check if need to switch stage
+        screen_bound = self.player.check_screen_bounds()
+        if screen_bound is not None:
+            self.level_creator.stage += screen_bound
+            for sprite in self.all_sprites:
+                if not isinstance(sprite, Player):
+                    sprite.kill()
+            self.level_creator.create_level(self.level_creator.level)
+            if screen_bound.x != 0:
+                self.player.pos.x = screen_bound.x % self.window_size[0]
+            elif screen_bound.y != 0:
+                self.player.pos.y = screen_bound.y % self.window_size[1]
+
 
     def render(self):
         """Renders all game objects."""

@@ -1,5 +1,4 @@
 import pygame as pg
-from pygame.math import *
 
 
 class Wall(pg.sprite.Sprite):
