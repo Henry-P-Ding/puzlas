@@ -34,8 +34,16 @@ class Game:
         self.background = pg.Surface([window_size[0], window_size[1]])
         self.background.fill((0, 0, 0))
 
+        # start menu
+        #self.start_menu = pygame_menu.Menu(width=self.window_size[0], height=self.window_size[1],
+        #                                   theme=pygame_menu.themes.THEME_DEFAULT, title="puzlas")
+        #self.start_menu.add.button('Play', self.start)
+        #self.start_menu.add.button('Quit', pygame_menu.events.EXIT)
+
     def start(self):
         """Initialize the start of the game"""
+        #self.start_menu.clear(True)
+        #pg.display.update()
         self.running = True
         pg.init()
         # example level
@@ -94,20 +102,8 @@ class Game:
         """Behavior for the end of the game."""
         pass
 
-surface = create_example_window('puzlas', (600, 400))
-def start_the_game():
-    game.start()
 
-menu = pygame_menu.Menu(
-    height=300,
-    theme=pygame_menu.themes.THEME_BLUE,
-    title='Welcome',
-    width=400
-)
-menu.add.button('Play', start_the_game)
-menu.add.button('Quit', pygame_menu.events.EXIT)
-
-
+pg.init()
 game = Game((768, 640), 60)
-menu.mainloop(surface)
 game.start()
+#game.start_menu.mainloop(game.screen)
