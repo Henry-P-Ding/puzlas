@@ -16,16 +16,26 @@ class Player(pg.sprite.Sprite):
         # direction of player movement
         self.dir = Vector2(0, 0)
         # different walking animations
-        self.images = [pg.transform.scale(pg.image.load("assets/player/player_{0}.png".format(x)), Player.DISPLAY_SIZE) for x in
-                       ["front",
-                        "up",
-                        "down",
-                        "side_l",
-                        "side_r",
-                        "diag_dl",
-                        "diag_dr",
-                        "diag_ul",
-                        "diag_ur"]]
+        self.images = [pg.transform.scale(pg.image.load("assets/player/tile{0}.png".format(x)), Player.DISPLAY_SIZE) for x in
+                       ["000",
+                        "001",
+                        "002",
+                        "003",
+                        "004",
+                        "005",
+                        "006",
+                        "007",
+                        "008"
+                        "009",
+                        "010",
+                        "011",
+                        "012",
+                        "013",
+                        "014",
+                        "015",
+                        "024",
+                        "025",
+                        "026"]]
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.game = game
