@@ -10,7 +10,7 @@ class Player(pg.sprite.Sprite):
     SPEED = 5
     DISPLAY_SIZE = (60, 60)
 
-    def __init__(self, group, game):
+    def __init__(self, group, game_state):
         super().__init__(group)
         self.pos = Vector2(200, 200)
         # direction of player movement
@@ -28,9 +28,8 @@ class Player(pg.sprite.Sprite):
                         "diag_ur"]]
         self.image = self.images[0]
         self.rect = self.image.get_rect()
-        self.game = game
+        self.game_state = game_state
         self.rect.size = (Player.DISPLAY_SIZE[0], Player.DISPLAY_SIZE[1])
-        #self.image.
         self.rect.center = self.pos.x, self.pos.y
 
     def update(self):
@@ -41,8 +40,8 @@ class Player(pg.sprite.Sprite):
         self.rect.center = self.pos.x, self.pos.y
 
         # wall collision check
-        if pg.sprite.spritecollideany(self, self.game.walls) is not None:
-            while pg.sprite.spritecollideany(self, self.game.walls) is not None:
+        if pg.sprite.spritecollideany(self, self.game_state.walls) is not None:
+            while pg.sprite.spritecollideany(self, self.game_state.walls) is not None:
                 self.pos -= self.dir
                 self.rect.center = self.pos.x, self.pos.y
             # algorithm to include sliding along walls
@@ -53,7 +52,7 @@ class Player(pg.sprite.Sprite):
             for i, x in enumerate(adj):
                 adj_pos = self.pos + Player.SPEED * x
                 self.rect.center = adj_pos.x, adj_pos.y
-                if pg.sprite.spritecollideany(self, self.game.walls):
+                if pg.sprite.spritecollideany(self, self.game_state.walls):
                     if i % 2 == 0:
                         x_collision = True
                     else:
@@ -95,11 +94,11 @@ class Player(pg.sprite.Sprite):
 
     # check player colliding with edge of screen
     def check_screen_bounds(self):
-        if self.pos.x > self.game.window_size[0]:
+        if self.pos.x > self.game_state.game.window_size[0]:
             return Vector2(1, 0)
         elif self.pos.x < 0:
             return Vector2(-1, 0)
-        elif self.pos.y > self.game.window_size[1]:
+        elif self.pos.y > self.game_state.game.window_size[1]:
             return Vector2(0, 1)
         elif self.pos.y < 0:
             return Vector2(0, -1)
