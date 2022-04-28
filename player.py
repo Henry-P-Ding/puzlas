@@ -92,9 +92,15 @@ class Player(pg.sprite.Sprite):
             elif not self.facing_right:  # storing animation
                 self.image = pg.transform.flip(self.images[((self.frametimer // 5) % 6)], True, False)
         elif self.dir.y > 0:  # up and down animation
-            self.image = self.images[((self.frametimer // 5) % 6) + 6]
+            if self.facing_right:
+                self.image = self.images[((self.frametimer // 15) % 6)+6]
+            elif not self.facing_right:  # storing animation
+                self.image = pg.transform.flip(self.images[(((self.frametimer // 5) % 6))+6], True, False)
         elif self.dir.y < 0:  # up and down animation
-            self.image = self.images[((self.frametimer // 5) % 6) + 6]
+            if self.facing_right:
+                self.image = self.images[((self.frametimer // 15) % 6)+6]
+            elif not self.facing_right:  # storing animation
+                self.image = pg.transform.flip(self.images[(((self.frametimer // 5) % 6))+6], True, False)
         self.frametimer += 1
 
         # reset direction vector
