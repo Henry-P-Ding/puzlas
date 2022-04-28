@@ -16,7 +16,8 @@ class Player(pg.sprite.Sprite):
         # direction of player movement
         self.dir = Vector2(0, 0)
         # different walking animations
-        self.images = [pg.transform.scale(pg.image.load("assets/player/tile{0}.png".format(x)), Player.DISPLAY_SIZE) for x in
+        self.images = [pg.transform.scale(pg.image.load("assets/player/tile{0}.png".format(x)), Player.DISPLAY_SIZE) for
+                       x in
                        ["000",
                         "001",
                         "002",
@@ -25,7 +26,7 @@ class Player(pg.sprite.Sprite):
                         "005",
                         "006",
                         "007",
-                        "008"
+                        "008",
                         "009",
                         "010",
                         "011",
@@ -40,8 +41,10 @@ class Player(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.game = game
         self.rect.size = (Player.DISPLAY_SIZE[0], Player.DISPLAY_SIZE[1])
-        #self.image.
+        # self.image.
         self.rect.center = self.pos.x, self.pos.y
+        self.frametimer = 0
+        self.facing_right = True
 
     def update(self):
         # movement
@@ -77,24 +80,22 @@ class Player(pg.sprite.Sprite):
             self.rect.center = self.pos.x, self.pos.y
 
         # walking animation
-        if self.dir.x > 0 and self.dir.y > 0:
-            self.image = self.images[6]
-        elif self.dir.x > 0 and self.dir.y < 0:
-            self.image = self.images[7]
-        elif self.dir.x < 0 and self.dir.y > 0:
-            self.image = self.images[5]
-        elif self.dir.x < 0 and self.dir.y < 0:
-            self.image = self.images[8]
-        elif self.dir.x > 0 and self.dir.y == 0:
-            self.image = self.images[4]
-        elif self.dir.x < 0 and self.dir.y == 0:
-            self.image = self.images[3]
-        elif self.dir.x == 0 and self.dir.y > 0:
-            self.image = self.images[2]
-        elif self.dir.x == 0 and self.dir.y < 0:
-            self.image = self.images[1]
-        else:
-            self.image = self.images[0]
+        if self.dir.x > 0:  # facing right walking animation
+            self.image = self.images[((self.frametimer // 5) % 6) + 6]
+            self.facing_right = True
+        elif self.dir.x < 0:  # facing left walking animation
+            self.image = pg.transform.flip(self.images[((self.frametimer // 5) % 6) + 6], True, False)
+            self.facing_right = False
+        elif self.dir.x == 0 and self.dir.y == 0:  # staying still animation
+            if self.facing_right:
+                self.image = self.images[(self.frametimer // 15) % 6]
+            elif not self.facing_right:  # storing animation
+                self.image = pg.transform.flip(self.images[((self.frametimer // 5) % 6)], True, False)
+        elif self.dir.y > 0:  # up and down animation
+            self.image = self.images[((self.frametimer // 5) % 6) + 6]
+        elif self.dir.y < 0:  # up and down animation
+            self.image = self.images[((self.frametimer // 5) % 6) + 6]
+        self.frametimer += 1
 
         # reset direction vector
         self.dir.update(0, 0)
