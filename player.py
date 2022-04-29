@@ -7,8 +7,12 @@ class Player(pg.sprite.Sprite):
     Player-controlled game object class
     """
     # TODO: create a settings file for constants
-    SPEED = 5
-    DISPLAY_SIZE = (60, 60)
+    SPEED = 8
+    DISPLAY_SIZE = (60, 80)
+    ANIMATION_SPEED = {
+        "standing": 12,
+        "moving": 3
+    }
 
     def __init__(self, group, game_state):
         super().__init__(group)
@@ -38,14 +42,18 @@ class Player(pg.sprite.Sprite):
                         "025",
                         "026"]]
         self.image = self.images[0]
+        for image in self.images:
+            print(image.get_size())
         self.rect = self.image.get_rect()
         self.game_state = game_state
         self.rect.size = (Player.DISPLAY_SIZE[0], Player.DISPLAY_SIZE[1])
         self.rect.center = self.pos.x, self.pos.y
-        self.frametimer = 0
+        self.frame_counter = 0
         self.facing_right = True
 
     def update(self):
+        # update frame counter
+        self.frame_counter += 1
         # movement
         if self.dir.length() != 0:
             self.dir = self.dir.normalize()
@@ -54,6 +62,11 @@ class Player(pg.sprite.Sprite):
 
         # wall collision check
         if pg.sprite.spritecollideany(self, self.game_state.walls) is not None:
+            if self.facing_right:
+                self.image = self.images[(self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6]
+            elif not self.facing_right:  # storing animation
+                self.image = pg.transform.flip(
+                    self.images[((self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6)], True, False)
             while pg.sprite.spritecollideany(self, self.game_state.walls) is not None:
                 self.pos -= self.dir
                 self.rect.center = self.pos.x, self.pos.y
@@ -77,30 +90,24 @@ class Player(pg.sprite.Sprite):
             elif not x_collision and y_collision:
                 self.pos += Player.SPEED * Vector2(self.dir.x, 0)
             self.rect.center = self.pos.x, self.pos.y
-
-        # walking animation
-        if self.dir.x > 0:  # facing right walking animation
-            self.image = self.images[((self.frametimer // 5) % 6) + 6]
-            self.facing_right = True
-        elif self.dir.x < 0:  # facing left walking animation
-            self.image = pg.transform.flip(self.images[((self.frametimer // 5) % 6) + 6], True, False)
-            self.facing_right = False
-        elif self.dir.x == 0 and self.dir.y == 0:  # staying still animation
-            if self.facing_right:
-                self.image = self.images[(self.frametimer // 15) % 6]
-            elif not self.facing_right:  # storing animation
-                self.image = pg.transform.flip(self.images[((self.frametimer // 5) % 6)], True, False)
-        elif self.dir.y > 0:  # up and down animation
-            if self.facing_right:
-                self.image = self.images[((self.frametimer // 15) % 6)+6]
-            elif not self.facing_right:  # storing animation
-                self.image = pg.transform.flip(self.images[(((self.frametimer // 5) % 6))+6], True, False)
-        elif self.dir.y < 0:  # up and down animation
-            if self.facing_right:
-                self.image = self.images[((self.frametimer // 15) % 6)+6]
-            elif not self.facing_right:  # storing animation
-                self.image = pg.transform.flip(self.images[(((self.frametimer // 5) % 6))+6], True, False)
-        self.frametimer += 1
+        else:
+            # walking animation
+            if self.dir.x > 0:  # facing right walking animation
+                self.image = self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6]
+                self.facing_right = True
+            elif self.dir.x < 0:  # facing left walking animation
+                self.image = pg.transform.flip(self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6], True, False)
+                self.facing_right = False
+            elif self.dir.y != 0:  # up and down animation
+                if self.facing_right:
+                    self.image = self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6]
+                else:
+                    self.image = pg.transform.flip(self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6], True, False)
+            else:  # staying still animation
+                if self.facing_right:
+                    self.image = self.images[(self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6]
+                elif not self.facing_right:  # storing animation
+                    self.image = pg.transform.flip(self.images[((self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6)], True, False)
 
         # reset direction vector
         self.dir.update(0, 0)

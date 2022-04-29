@@ -105,8 +105,6 @@ class PlayingState(GameState):
         self.walls = pg.sprite.Group()
         # enemy sprites
         self.enemies = pg.sprite.Group()
-        # player object
-        self.player = None
 
     def setup(self):
         # example level

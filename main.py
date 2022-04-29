@@ -45,5 +45,5 @@ class Game:
 
 
 pg.init()
-game = Game((768, 640), 60)
+game = Game((704, 512), 60)
 game.start()
