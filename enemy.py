@@ -3,6 +3,7 @@ from pygame.math import *
 
 
 class Enemy(pg.sprite.Sprite):
+    # TODO: animate enemy
     """
     Generic enemies class that attacks player
     """
@@ -31,9 +32,11 @@ class Enemy(pg.sprite.Sprite):
         self.pathing_nodes = []
         # tile distances
         self.tile_dist = []
+        # frame count
+        self.frame_counter = 0
 
     def update(self):
-        pass
+        self.frame_counter += 1
 
     def attack(self):
         pass
@@ -147,6 +150,7 @@ class Melee(Enemy):
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.melee_range)
         self.move()
         self.attack()
+        self.frame_counter += 1
 
     def attack(self):
         """Attacks player within a certain range."""

@@ -2,6 +2,7 @@ from player import *
 from level_creator import *
 from controls import *
 from gui import *
+from ability import *
 
 
 class GameStateManager:
@@ -37,7 +38,12 @@ class GameState:
         # all sprites associated with this game state
         self.all_sprites = pg.sprite.RenderUpdates()
         # controls associated with this game state
-        self.controls = Controls(self.game).get_controls_by_name(name)
+        self.key_controls, self.mouse_controls = Controls(self.game).get_controls_by_name(name)
+        # TODO: add mouse controls
+        # mouse properties
+        self.mouse_pos = pg.mouse.get_pos()
+        # list of [mouse_down, mouse_up]
+        self.mouse_events = [False, False]
 
     # TODO: merge this with the constructor?
     def setup(self):
@@ -57,15 +63,26 @@ class GameState:
 
     def input(self):
         """Handles user input, and maps input to associated methods using the control class."""
+        self.mouse_events = [False, False]
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.game.running = False
+            if event.type == pg.MOUSEBUTTONDOWN:
+                self.mouse_events[0] = True
+            elif event.type == pg.MOUSEBUTTONUP:
+                self.mouse_events[1] = True
+        # updates mouse position
+        self.mouse_pos = pg.mouse.get_pos()
+        # activates player ability if mouse is down
+        for i, condition in enumerate(self.mouse_events):
+            if condition:
+                self.mouse_controls[i]()
 
         # boolean list of key_strokes that are pressed
         key_strokes = pg.key.get_pressed()
-        for control in self.controls:
+        for control in self.key_controls:
             if key_strokes[control]:
-                self.controls[control]()
+                self.key_controls[control]()
 
     def update(self):
         """Update step in game state loop."""
@@ -113,7 +130,7 @@ class PlayingState(GameState):
 
     def load(self):
         # setup controls to matching with the game state
-        self.controls = Controls(self.game).get_controls()
+        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
 
     def update(self):
         """Updates all game objects based on input."""
@@ -144,7 +161,7 @@ class StartMenu(GameState):
 
     def __init__(self, game, name):
         super().__init__(game, name)
-        self.controls = None
+        self.key_controls = None
         # game background
         self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
         self.background.fill((0, 0, 0))
@@ -160,7 +177,7 @@ class StartMenu(GameState):
     def load(self):
         """Sets up three buttons for starting the game, options menu, and to quit the game."""
         # set controls to the controls associated with the game state.
-        self.controls = Controls(self.game).get_controls()
+        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
         self.buttons = [
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
                    "start game", lambda: self.game.game_state_manager.switch_state(self.game.game_state_pool["playing"])),
@@ -218,7 +235,7 @@ class PauseMenu(GameState):
 
     def load(self):
         """Loads controls for the pause menu, and sets overlay to false."""
-        self.controls = Controls(self.game).get_controls()
+        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
         self.overlay_on = False
 
     def update(self):

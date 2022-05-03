@@ -1,5 +1,6 @@
 import pygame as pg
 from pygame.math import *
+from ability import *
 
 
 class Player(pg.sprite.Sprite):
@@ -42,14 +43,15 @@ class Player(pg.sprite.Sprite):
                         "025",
                         "026"]]
         self.image = self.images[0]
-        for image in self.images:
-            print(image.get_size())
         self.rect = self.image.get_rect()
         self.game_state = game_state
         self.rect.size = (Player.DISPLAY_SIZE[0], Player.DISPLAY_SIZE[1])
         self.rect.center = self.pos.x, self.pos.y
         self.frame_counter = 0
         self.facing_right = True
+        # checks whether ability is active or not
+        self.ability_active = False
+        self.ability = ShootFireBall(self)
 
     def update(self):
         # update frame counter
@@ -91,6 +93,7 @@ class Player(pg.sprite.Sprite):
                 self.pos += Player.SPEED * Vector2(self.dir.x, 0)
             self.rect.center = self.pos.x, self.pos.y
         else:
+            # TODO: add separate animation function for player
             # walking animation
             if self.dir.x > 0:  # facing right walking animation
                 self.image = self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6]
@@ -109,9 +112,15 @@ class Player(pg.sprite.Sprite):
                 elif not self.facing_right:  # storing animation
                     self.image = pg.transform.flip(self.images[((self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6)], True, False)
 
+        # activates player ability
+        if self.ability_active:
+            self.ability.activate((self.game_state.mouse_pos - self.pos).normalize())
+
+
         # reset direction vector
         self.dir.update(0, 0)
 
+    # TODO: Move comments into the method
     # adds vector to player direction
     def add_dir(self, v):
         self.dir += v
@@ -128,3 +137,8 @@ class Player(pg.sprite.Sprite):
             return Vector2(0, -1)
 
         return
+
+    def set_ability_active(self, value):
+        """Sets player's ability to be active."""
+        self.ability_active = value
+
