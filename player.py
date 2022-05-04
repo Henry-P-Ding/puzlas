@@ -1,6 +1,5 @@
 import pygame as pg
 from pygame.math import *
-from ability import *
 
 
 class Player(pg.sprite.Sprite):
@@ -51,7 +50,7 @@ class Player(pg.sprite.Sprite):
         self.facing_right = True
         # checks whether ability is active or not
         self.ability_active = False
-        self.ability = ShootFireBall(self)
+        self.ability = None
 
     def update(self):
         # update frame counter
@@ -158,7 +157,6 @@ class Player(pg.sprite.Sprite):
             return Vector2(0, 1)
         elif self.pos.y < 0:
             return Vector2(0, -1)
-
         return
 
     def set_ability_active(self, value):

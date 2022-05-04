@@ -1,5 +1,6 @@
 from game_state import *
-import pygame as pg
+
+
 
 
 class Game:

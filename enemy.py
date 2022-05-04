@@ -1,5 +1,6 @@
 import pygame as pg
 from pygame.math import *
+from abilities import *
 
 
 class Enemy(pg.sprite.Sprite):
@@ -7,7 +8,10 @@ class Enemy(pg.sprite.Sprite):
     """
     Generic enemies class that attacks player
     """
-    def __init__(self, group, game_state, pos, size, steering_rate, speed):
+    # cooldown before enemy can take damage again
+    DAMAGE_COOLDOWN = 30
+
+    def __init__(self, group, game_state, pos, size, steering_rate, speed, health):
         super().__init__(group)
         # tuple containing (width, height) of the enemies
         self.size = size
@@ -34,6 +38,12 @@ class Enemy(pg.sprite.Sprite):
         self.tile_dist = []
         # frame count
         self.frame_counter = 0
+        # health
+        self.health = health
+        # recently taken damage
+        self.damaged = False
+        self.damage_source = None
+        self.damage_frame = self.frame_counter;
 
     def update(self):
         self.frame_counter += 1
@@ -131,13 +141,17 @@ class Enemy(pg.sprite.Sprite):
 
         self.dir.update(0, 0)
 
+    def on_damage(self, damage, source):
+        """Behavior when enemy takes damage."""
+        self.damaged = True
+
 
 class Melee(Enemy):
     """
     Melee enemy class that can attack the player within a certain melee range.
     """
-    def __init__(self, group, game_state, pos, size, steering_rate, speed, melee_range):
-        super().__init__(group, game_state, pos, size, steering_rate, speed)
+    def __init__(self, group, game_state, pos, size, steering_rate, speed, health, melee_range):
+        super().__init__(group, game_state, pos, size, steering_rate, speed, health)
         # range of melee attacks in pixels
         self.melee_range = melee_range
 
@@ -148,11 +162,57 @@ class Melee(Enemy):
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.melee_range)
+        self.image.fill((100, 100, 100))
+        if self.damaged:
+            self.damage_source.damaging(self)
+            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
+                self.damaged = False
+
         self.move()
         self.attack()
         self.frame_counter += 1
+        if self.health <= 0:
+            self.kill()
 
     def attack(self):
         """Attacks player within a certain range."""
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.melee_range * self.melee_range:
-            print("melee attack!")
+            pass
+
+    def on_damage(self, source):
+        self.damaged = True
+        self.damage_frame = self.frame_counter
+        self.damage_source = source
+        self.health -= self.damage_source.damage
+        self.damage_source.on_damage(self)
+
+class FireMage(Enemy):
+    """
+    Fire mage enemy class that can attack the player at range.
+    """
+    def __init__(self, group, game_state, pos, size, steering_rate, speed, health, range, attack_list):
+        super().__init__(group, game_state, pos, size, steering_rate, speed, health)
+        self.range = range
+        self.ability = ShootFireBall(self, attack_list, attack_list)
+
+    def update(self):
+        # pathfinds to the player
+        self.path_find_to_player()
+        # steer towards nearest node if it can path to the player
+        if len(self.pathing_nodes) > 0:
+            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
+                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
+        self.move()
+        self.attack()
+        self.frame_counter += 1
+        if self.health <= 0:
+            self.kill()
+
+    def activate_ability(self):
+        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
+
+    def attack(self):
+        """Attacks player within a certain range."""
+        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+            self.activate_ability()
+

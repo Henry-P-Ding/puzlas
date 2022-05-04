@@ -1,8 +1,9 @@
-from player import *
-from level_creator import *
+import pygame as pg
+from pygame.math import *
 from controls import *
+from level_creator import *
+from player import *
 from gui import *
-from ability import *
 
 
 class GameStateManager:
@@ -126,6 +127,7 @@ class PlayingState(GameState):
     def setup(self):
         # example level
         self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
+        self.player.ability = ShootFireBall(self.player, [self.walls, self.enemies], [self.enemies])
         return self
 
     def load(self):
