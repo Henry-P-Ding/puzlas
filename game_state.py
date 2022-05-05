@@ -1,8 +1,6 @@
-import pygame as pg
-from pygame.math import *
-from controls import *
+import controls
 from level_creator import *
-from player import *
+from entity.player import *
 from gui import *
 
 
@@ -10,20 +8,34 @@ class GameStateManager:
     """
     Manages switching between different game states.
     """
-    def __init__(self, game):
+    def __init__(self, game, start_state, pool):
         self.game = game
+        # active game states in a stack - top of stack is looping game currently
+        self.state_stack = [start_state]
+        # inactive game states in a pool
+        self.pool = pool
+
+    def exit_state(self):
+        self.current_state().exit()
+        state = self.state_stack.pop()
+        self.pool[state.name] = state
+
+    def enter_state(self, new_state):
+        self.state_stack.append(new_state)
+        self.current_state().load()
+
+    def enter_state_from_pool(self, name):
+        self.enter_state(self.pool[name])
 
     def switch_state(self, new_state):
-        self.game.game_state.exit()
-        self.game.game_state_pool[self.game.game_state.name] = self.game.game_state
-        self.game.game_state = new_state
-        self.game.game_state.load()
+        self.exit_state()
+        self.enter_state(new_state)
 
-    def pause(self):
-        if self.game.game_state.name == "playing":
-            self.switch_state(self.game.game_state_pool["pause_menu"])
-        elif self.game.game_state.name == "pause_menu":
-            self.switch_state(self.game.game_state_pool["playing"])
+    def switch_state_from_pool(self, name):
+        self.switch_state(self.pool[name])
+
+    def current_state(self):
+        return self.state_stack[-1]
 
 
 class GameState:
@@ -39,17 +51,9 @@ class GameState:
         # all sprites associated with this game state
         self.all_sprites = pg.sprite.RenderUpdates()
         # controls associated with this game state
-        self.key_controls, self.mouse_controls = Controls(self.game).get_controls_by_name(name)
-        # TODO: add mouse controls
-        # mouse properties
+        self.controls = None
+        # mouse position
         self.mouse_pos = pg.mouse.get_pos()
-        # list of [mouse_down, mouse_up]
-        self.mouse_events = [False, False]
-
-    # TODO: merge this with the constructor?
-    def setup(self):
-        """Setup game state. Used separately from when game-state is initialized."""
-        return self
 
     def load(self):
         """Behavior when this game state is loaded from pool."""
@@ -64,30 +68,19 @@ class GameState:
 
     def input(self):
         """Handles user input, and maps input to associated methods using the control class."""
-        self.mouse_events = [False, False]
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.game.running = False
-            if event.type == pg.MOUSEBUTTONDOWN:
-                self.mouse_events[0] = True
-            elif event.type == pg.MOUSEBUTTONUP:
-                self.mouse_events[1] = True
-        # updates mouse position
-        self.mouse_pos = pg.mouse.get_pos()
-        # activates player ability if mouse is down
-        for i, condition in enumerate(self.mouse_events):
-            if condition:
-                self.mouse_controls[i]()
+            else:
+                self.controls.process_event(event)
 
-        # boolean list of key_strokes that are pressed
-        key_strokes = pg.key.get_pressed()
-        for control in self.key_controls:
-            if key_strokes[control]:
-                self.key_controls[control]()
+        # updates mouse positoin
+        self.mouse_pos = pg.mouse.get_pos()
 
     def update(self):
         """Update step in game state loop."""
-        pass
+        # updates game sprites
+        self.all_sprites.update()
 
     def render(self):
         """Renders all game objects."""
@@ -123,16 +116,12 @@ class PlayingState(GameState):
         self.walls = pg.sprite.Group()
         # enemy sprites
         self.enemies = pg.sprite.Group()
+        # set controls
+        self.controls = controls.PlayingControls(self.game)
 
-    def setup(self):
         # example level
         self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
-        self.player.ability = ShootFireBall(self.player, [self.walls, self.enemies], [self.enemies])
-        return self
-
-    def load(self):
-        # setup controls to matching with the game state
-        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
+        self.player.ability = ShootHook(self.player, [self.walls, self.enemies], [self.enemies])
 
     def update(self):
         """Updates all game objects based on input."""
@@ -159,44 +148,35 @@ class PlayingState(GameState):
 class StartMenu(GameState):
     # delay between consecutive key presses on the start menu
     # TODO: make this key-release instead
-    BUTTON_DELAY = 15
 
     def __init__(self, game, name):
         super().__init__(game, name)
-        self.key_controls = None
         # game background
         self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
         self.background.fill((0, 0, 0))
         # sprites
         self.all_sprites = pg.sprite.RenderUpdates()
-        self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
+        self.selector = None
         self.buttons = {}
         # selected option out of start options
         self.selection = 0
-        self.frame_counter = 0
-        self.previous_press = self.frame_counter
+        # sets controls
+        self.controls = controls.StartMenuControls(self.game)
 
     def load(self):
-        """Sets up three buttons for starting the game, options menu, and to quit the game."""
-        # set controls to the controls associated with the game state.
-        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
+        self.game.screen.blit(self.background, (0, 0))
+        pg.display.update(self.background.get_rect())
         self.buttons = [
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
-                   "start game", lambda: self.game.game_state_manager.switch_state(self.game.game_state_pool["playing"])),
+                   "play game", lambda: self.game.game_state_manager.switch_state_from_pool("playing")),
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 200), 30, (200, 200, 200),
                    "options", lambda: print("opening options")),
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 300), 30, (200, 200, 200),
                    "quit", lambda: self.game.stop())
         ]
         # reset selection to 0
+        self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
         self.selection = 0
-
-    def update(self):
-        """Updates all game objects based on input."""
-        # updates game sprites
-        self.all_sprites.update()
-        # advances frame counter
-        self.frame_counter += 1
 
     def activate_selection(self):
         """Activates selected button's defined function."""
@@ -205,50 +185,83 @@ class StartMenu(GameState):
     def update_selection(self, i):
         """Changes selected button based on key presses."""
         # switching delay
-        if self.frame_counter - self.previous_press > StartMenu.BUTTON_DELAY:
-            self.selection += i
-            # ensures selection is within bounds
-            if not 0 <= self.selection < len(self.buttons):
-                self.selection -= i
-                return
-            # moves selector sprite
-            self.selector.change_selection(self.buttons[self.selection].pos)
-            # resets switching frame delay
-            self.previous_press = self.frame_counter
+        self.selection += i
+        # ensures selection is within bounds
+        if not 0 <= self.selection < len(self.buttons):
+            self.selection -= i
+            return
+        # moves selector sprite
+        self.selector.change_selection(self.buttons[self.selection].pos)
+        # resets switching frame delay
 
     def exit(self):
         """Kills all sprites when exiting start menu, since not many sprites are present."""
-        for sprite in self.all_sprites:
-            sprite.kill()
+        self.all_sprites.empty()
 
 
-# TODO: make pausing/unpausing the same key
+# TODO: inherit selection game state class for both StartMenu and PauseMenu
 class PauseMenu(GameState):
     # intensity of black tint on screen during pause menu
     TINT = 150
 
     def __init__(self, game, name):
         super().__init__(game, name)
-        # tinted overlay during pause menu
-        self.overlay = pg.Surface(self.game.window_size, pg.SRCALPHA)
-        self.overlay.fill((0, 0, 0, PauseMenu.TINT))
-        # check whether overlay is on or off - this avoids issues with overlay resetting from game loop render order
-        self.overlay_on = False
+        # set controls
+        self.controls = controls.PauseMenuControls(self.game)
+        # game background
+        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
+        self.background.fill((0, 0, 0))
+        # selecting options
+        self.selector = None
+        self.box = None
+        self.buttons = {}
+        # selected option out of start options
+        self.selection = 0
 
     def load(self):
         """Loads controls for the pause menu, and sets overlay to false."""
-        self.key_controls, self.mouse_controls = Controls(self.game).get_controls()
-        self.overlay_on = False
-
-    def update(self):
-        # TODO: implement pause menu
-        pass
+        self.box = Box(self.all_sprites, Vector2(200, 60), Vector2(520, 350), (120, 120, 120))
+        self.buttons = [
+            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
+                   "resume game", lambda: self.game.game_state_manager.switch_state_from_pool("playing")),
+            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 200), 30, (200, 200, 200),
+                   "options", lambda: print("opening options")),
+            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 300), 30, (200, 200, 200),
+                   "quit to menu", lambda: self.quit_to_menu())
+        ]
+        self.selector = Selector(self.all_sprites, self.buttons[0].pos + Vector2(130, 0), Vector2(130, 0))
+        # reset selection to 0
+        self.selection = 0
 
     def render(self):
         """Renders pause button and overlay."""
-        # adds overlay if overlay is not detected to be on - this is
-        if not self.overlay_on:
-            self.game.screen.blit(self.overlay, (0, 0))
-            pg.display.update()
-            # once overlay is turned on, set to True
-            self.overlay_on = True
+
+        # clears sprites from the screen
+        self.all_sprites.clear(self.game.screen, self.background)
+        # pygame rectangles for all sprites to be updated on the game screen
+        sprite_rects = self.all_sprites.draw(self.game.screen)
+        # updates only areas of the screen that have changed
+        pg.display.update(sprite_rects)
+
+    def activate_selection(self):
+        """Activates selected button's defined function."""
+        self.buttons[self.selection].function()
+
+    def update_selection(self, i):
+        """Changes selected button based on key presses."""
+        # switching delay
+        self.selection += i
+        # ensures selection is within bounds
+        if not 0 <= self.selection < len(self.buttons):
+            self.selection -= i
+            return
+        # moves selector sprite
+        self.selector.change_selection(self.buttons[self.selection].pos)
+        # resets switching frame delay
+
+    def quit_to_menu(self):
+        self.game.game_state_manager.exit_state()
+        self.game.game_state_manager.switch_state_from_pool("start_menu")
+
+    def exit(self):
+        self.all_sprites.empty()

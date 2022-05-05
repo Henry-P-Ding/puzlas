@@ -1,5 +1,6 @@
 import pygame as pg
 
+
 class Button(pg.sprite.Sprite):
     # TODO: change to image instead of text
     """Button class with a text image and associated function that is executed on demand."""
@@ -13,9 +14,6 @@ class Button(pg.sprite.Sprite):
         self.font = pg.font.SysFont(font, size)
         self.image = self.font.render(self.text, False, color)
         self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
-
-    def update(self):
         self.rect.center = self.pos.x, self.pos.y
 
 
@@ -40,4 +38,14 @@ class Selector(pg.sprite.Sprite):
         self.pos = new_pos + self.spacing
 
     def update(self):
+        self.rect.center = self.pos.x, self.pos.y
+
+
+class Box(pg.sprite.Sprite):
+    def __init__(self, group, pos1, pos2, color):
+        super().__init__(group)
+        self.pos = (pos1 + pos2) / 2
+        self.image = pg.surface.Surface((int((pos2 - pos1).x), int((pos2 - pos1).y)))
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
         self.rect.center = self.pos.x, self.pos.y

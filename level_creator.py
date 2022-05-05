@@ -1,8 +1,6 @@
-from pygame.math import *
-from wall import *
-from enemy import *
-from player import *
-from abilities import *
+from entity.wall import *
+from entity.enemy import *
+from entity.ability import *
 
 
 class LevelCreator:
@@ -50,8 +48,9 @@ class LevelCreator:
 
     def place_wall(self, tile_x, tile_y):
         """Places a wall object at tile location."""
-        self.game_state.walls.add(Wall(self.game_state.all_sprites, self.game_state,
-                                       Vector2(tile_x * self.game_state.tile_size, tile_y * self.game_state.tile_size)))
+        self.game_state.walls.add(Wall(group=self.game_state.all_sprites,
+                                       game_state=self.game_state,
+                                       pos=Vector2(tile_x * self.game_state.tile_size, tile_y * self.game_state.tile_size)))
 
     def place_player(self, tile_x, tile_y):
         """Places player object at tile location."""
@@ -60,24 +59,19 @@ class LevelCreator:
 
     def place_melee(self, tile_x, tile_y):
         """Places melee enemy at tile location."""
-        self.game_state.enemies.add(Melee(self.game_state.all_sprites,
-                                          self.game_state,
-                                          Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size,
-                                                  (2 * tile_y + 1) / 2 * self.game_state.tile_size),
-                                          (48, 64),
-                                          10,
-                                          3,
-                                          100,
-                                          100))
+        self.game_state.enemies.add(Melee(group=self.game_state.all_sprites,
+                                          game_state=self.game_state,
+                                          pos=Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size, (2 * tile_y + 1) / 2 * self.game_state.tile_size),
+                                          speed=3,
+                                          health=100,
+                                          melee_range=100))
 
     def place_fire_mage(self, tile_x, tile_y):
         """Places fire mage enemy at tile location."""
-        self.game_state.enemies.add(FireMage(self.game_state.all_sprites,
-                                             self.game_state,
-                                             Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size,
-                                                     (2 * tile_y + 1) / 2 * self.game_state.tile_size),
-                                             (48, 64),
-                                             10,
-                                             3,
-                                             10,
-                                             100))
+        self.game_state.enemies.add(FireMage(group=self.game_state.all_sprites,
+                                             game_state=self.game_state,
+                                             pos=Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size, (2 * tile_y + 1) / 2 * self.game_state.tile_size),
+                                             speed=3,
+                                             health=50,
+                                             range=200,
+                                             attack_list=[self.game_state.walls, self.game_state.player]))

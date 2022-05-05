@@ -2,65 +2,81 @@ import pygame as pg
 
 
 class Controls:
-    """
-    Controls class that handles the mapping of user inputs to game functions
-    """
-
     def __init__(self, game):
-        self.key_controls = None
-        self.mouse_controls = None
-        # game containing this controls class
         self.game = game
-        self.state_map = {
-            "playing": self.set_playing_controls,
-            "pause_menu": self.set_pause_menu_controls,
-            "start_menu": self.set_start_menu_controls
+        self.event_maps = {
+            "mouse_down": {},
+            "mouse_up": {},
+            "key_down": {},
+            "key_up": {}
         }
 
-    def get_controls(self):
-        """Returns dict of controls to associated methods"""
-        if self.key_controls is None:
-            self.state_map[self.game.game_state.name]()
-            return self.key_controls, self.mouse_controls
-        return self.key_controls, self.mouse_controls
+    def process_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            self.mouse_down(event)
+        elif event.type == pg.MOUSEBUTTONUP:
+            self.mouse_up(event)
+        elif event.type == pg.KEYDOWN:
+            self.key_down(event)
+        elif event.type == pg.KEYUP:
+            self.key_up(event)
 
-    def get_controls_by_name(self, name):
-        self.state_map[name]()
-        return self.key_controls, self.mouse_controls
+    def mouse_down(self, event):
+        self.event_maps["mouse_down"].get(event.button, lambda: None)()
 
-    def set_playing_controls(self):
-        """Default controls when playing the game"""
-        self.key_controls = {
-            pg.K_d: lambda: self.game.game_state.player.add_dir(pg.math.Vector2(1, 0)),
-            pg.K_a: lambda: self.game.game_state.player.add_dir(pg.math.Vector2(-1, 0)),
-            pg.K_w: lambda: self.game.game_state.player.add_dir(pg.math.Vector2(0, -1)),
-            pg.K_s: lambda: self.game.game_state.player.add_dir(pg.math.Vector2(0, 1)),
-            pg.K_p: lambda: self.game.game_state_manager.pause(),
-        }
-        self.mouse_controls = {
-            0: lambda: self.game.game_state.player.set_ability_active(True),
-            1: lambda: self.game.game_state.player.set_ability_active(False)
-        }
+    def mouse_up(self, event):
+        self.event_maps["mouse_up"].get(event.button, lambda: None)()
 
-    def set_pause_menu_controls(self):
-        """Controls when paused."""
-        self.key_controls = {
-            pg.K_u: lambda: self.game.game_state_manager.pause()
-        }
-        self.mouse_controls = {
-            0: lambda: None,
-            1: lambda: None
-        }
+    def key_down(self, event):
+        self.event_maps["key_down"].get(event.key, lambda: None)()
 
-    def set_start_menu_controls(self):
-        """Controls when paused."""
-        self.key_controls = {
-            pg.K_DOWN: lambda: self.game.game_state.update_selection(1),
-            pg.K_UP: lambda: self.game.game_state.update_selection(-1),
-            pg.K_RETURN: lambda: self.game.game_state.activate_selection()
+    def key_up(self, event):
+        self.event_maps["key_up"].get(event.key, lambda: None)()
+
+
+class PlayingControls(Controls):
+    def __init__(self, game):
+        super().__init__(game)
+        self.event_maps["key_down"] = {
+            pg.K_d: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(1, 0)),
+            pg.K_a: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),
+            pg.K_w: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, -1)),
+            pg.K_s: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, 1)),
         }
-        self.mouse_controls = {
-            0: lambda: None,
-            1: lambda: None
+        self.event_maps["key_up"] = {
+            pg.K_d: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),
+            pg.K_a: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(1, 0)),
+            pg.K_w: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, 1)),
+            pg.K_s: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, -1)),
+            pg.K_ESCAPE: lambda: self.game.game_state_manager.enter_state_from_pool("pause_menu")
+        }
+        self.event_maps["mouse_down"] = {
+            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_ability_active(True)
+        }
+        self.event_maps["mouse_up"] = {
+            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_ability_active(False)
         }
 
+
+class StartMenuControls(Controls):
+    def __init__(self, game):
+        super().__init__(game)
+        self.event_maps["key_down"] = {
+            pg.K_RETURN: lambda: self.game.game_state_manager.current_state().activate_selection(),
+            pg.K_DOWN: lambda: self.game.game_state_manager.current_state().update_selection(1),
+            pg.K_UP: lambda: self.game.game_state_manager.current_state().update_selection(-1)
+        }
+
+
+class PauseMenuControls(Controls):
+    def __init__(self, game):
+        super().__init__(game)
+        self.event_maps["key_down"] = {
+            pg.K_RETURN: lambda: self.game.game_state_manager.current_state().activate_selection(),
+            pg.K_DOWN: lambda: self.game.game_state_manager.current_state().update_selection(1),
+            pg.K_UP: lambda: self.game.game_state_manager.current_state().update_selection(-1)
+        }
+
+        self.event_maps["key_up"] = {
+            pg.K_ESCAPE: lambda: self.game.game_state_manager.exit_state()
+        }

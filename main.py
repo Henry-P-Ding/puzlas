@@ -1,8 +1,6 @@
 from game_state import *
 
 
-
-
 class Game:
     """Main game class containing all game-related objects"""
     def __init__(self, window_size, fps):
@@ -16,25 +14,25 @@ class Game:
         self.time_delta = self.clock.tick(self.fps)
         # game state: game is running
         self.running = False
-        self.game_state_pool = {
-            "playing": PlayingState(self, "playing").setup(),
-            "pause_menu": PauseMenu(self, "pause_menu").setup()
-        }
-        self.game_state = StartMenu(self, "start_menu").setup()
-        self.game_state_manager = GameStateManager(self)
+
+        # game states
+        self.game_state_manager = GameStateManager(self, StartMenu(self, "start_menu"), {
+            "playing": PlayingState(self, "playing"),
+            "pause_menu": PauseMenu(self, "pause_menu")
+        })
 
     def start(self):
         """Initialize the start of the game"""
         self.running = True
         pg.init()
         pg.font.init()
-        self.game_state.load()
+        self.game_state_manager.state_stack[-1].load()
         self.loop()
 
     def loop(self):
         """Game loop, runs input(), update(), and render() steps"""
         while self.running:
-            self.game_state.loop()
+            self.game_state_manager.state_stack[-1].loop()
 
         self.exit()
 

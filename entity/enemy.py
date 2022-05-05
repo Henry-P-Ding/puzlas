@@ -1,46 +1,27 @@
 import pygame as pg
 from pygame.math import *
-from abilities import *
+from entity.ability import *
+from entity.game_entity import AbilityEntity
+from entity.game_entity import Entity
 
 
-class Enemy(pg.sprite.Sprite):
-    # TODO: animate enemy
+class Enemy(AbilityEntity):
+    # TODO: animate enemy and implement enemy images
     """
     Generic enemies class that attacks player
     """
-    # cooldown before enemy can take damage again
+    # cooldown before enemy can take damage again TODO: does this belong here?
     DAMAGE_COOLDOWN = 30
 
-    def __init__(self, group, game_state, pos, size, steering_rate, speed, health):
-        super().__init__(group)
-        # tuple containing (width, height) of the enemies
-        self.size = size
-        # rate of turing towards the player
-        self.steering_rate = steering_rate
+    def __init__(self, group, game_state, pos, ability, speed, health):
+        super().__init__(group, game_state, pos, [pg.Surface([48, 64])], health, ability=ability)
+        self.image.fill((100, 100, 100))
         # movement speed
         self.speed = speed
-        # game position
-        self.pos = pos
         # movement direction
         self.dir = Vector2(0, 0)
-        # image of enemies
-        self.image = pg.Surface([self.size[0], self.size[1]])
-        self.image.fill((100, 100, 100))
-        # pygame rectangle object of enemies
-        self.rect = self.image.get_rect()
-        self.rect.update(0, 0, self.size[0], self.size[1])
-        self.rect.center = self.pos.x, self.pos.y
-        # game object containing the enemies
-        self.game_state = game_state
-        # positions that object is pathing to
-        self.pathing_nodes = []
-        # tile distances
-        self.tile_dist = []
-        # frame count
-        self.frame_counter = 0
-        # health
-        self.health = health
         # recently taken damage
+        # TODO move to health ability class
         self.damaged = False
         self.damage_source = None
         self.damage_frame = self.frame_counter;
@@ -53,7 +34,7 @@ class Enemy(pg.sprite.Sprite):
 
     def steer(self, new_pos, min_dist=0, max_dist=None):
         """
-        Steering behavior for movement towards player.
+        Steering behavior for movement towards pathfinding node.
         """
         displacement = (new_pos - self.pos)
         if max_dist is None:
@@ -63,15 +44,79 @@ class Enemy(pg.sprite.Sprite):
             if min_dist * min_dist < (self.game_state.player.pos - self.pos).magnitude_squared() < max_dist * max_dist:
                 self.dir = displacement.normalize()
 
+    def move(self):
+        """
+        Movement method
+        """
+        # movement
+        self.vel = self.speed * self.dir
+        self.pos += self.vel
+        self.hit_box.center = self.pos.x, self.pos.y
+
+        # wall collision detection
+        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+                self.pos -= self.dir
+                self.hit_box.center = self.pos.x, self.pos.y
+
+            # algorithm to include sliding along walls
+            # 0: left, 1: up, 2: right, 3: down
+            adj = [Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)]
+            x_collision = False
+            y_collision = False
+            for i, x in enumerate(adj):
+                adj_pos = self.pos + self.speed * x
+                self.hit_box.center = adj_pos.x, adj_pos.y
+                if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided):
+                    if i % 2 == 0:
+                        x_collision = True
+                    else:
+                        y_collision = True
+
+            # only allow sliding along walls if this is not a corner collision
+            if x_collision and not y_collision:
+                self.vel.x = 0
+                self.pos += self.vel.normalize()
+            elif not x_collision and y_collision:
+                self.vel.y = 0
+                self.pos += self.vel.normalize()
+            else:
+                self.vel = Vector2(0, 0)
+            self.hit_box.center = self.pos.x, self.pos.y
+
+        self.dir.update(0, 0)
+        self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
+
+    def on_damage(self, source):
+        """Behavior when enemy takes damage."""
+        self.damaged = True
+        self.damage_frame = self.frame_counter
+        self.damage_source = source
+        self.health -= self.damage_source.damage
+        self.damage_source.on_damage(self)
+
+
+class Pathfinder(Enemy):
+    def __init__(self, group, game_state, pos, ability, speed, health):
+        super().__init__(group, game_state, pos, ability, speed, health)
+        # positions that object is pathing to
+        self.pathing_nodes = []
+        # tile distances for pathfinding
+        self.tile_dist = []
+
     def path_find_to_player(self):
-        """Pathfinding towards player with BFS"""
+        """Pathfinds to player"""
+        self.path_find_to(self.game_state.player)
+
+    def path_find_to(self, entity):
+        if not (0 < self.pos.x < self.game_state.game.window_size[0] and 0 < self.pos.y < self.game_state.game.window_size[1]):
+            return
+        """Pathfinding towards target sprite with BFS"""
         # get positions of player and enemy in tile format
         pos_tile = self.pos // self.game_state.tile_size
-        player_tile = Vector2(self.game_state.player.pos.x % self.game_state.game.window_size[0], self.game_state.player.pos.y % self.game_state.game.window_size[1]) // self.game_state.tile_size
-        # TODO: note that all levels have to be rectangular
+        sprite_tile = Vector2(entity.pos.x % self.game_state.game.window_size[0], entity.pos.y % self.game_state.game.window_size[1]) // self.game_state.tile_size
         # dimensions of the level
         level_size = self.game_state.tile_dim
-
         # bfs algorithm to pathfinding
         visited = [[False for _ in range(level_size[0])] for _ in range(level_size[1])]
         self.tile_dist = [[-1 for _ in range(level_size[0])] for _ in range(level_size[1])]
@@ -96,7 +141,7 @@ class Enemy(pg.sprite.Sprite):
 
         # reset pathfinding nodes for every updated BFS iteration
         self.pathing_nodes = []
-        v = player_tile
+        v = sprite_tile
         self.pathing_nodes.insert(0, v)
         while self.tile_dist[int(v.y)][int(v.x)] > 1:
             for move in moves:
@@ -109,60 +154,26 @@ class Enemy(pg.sprite.Sprite):
                     v = u
                     break
 
-    def move(self):
-        """
-        Movement method to move towards player.
-        """
-        # stop moving if colliding with player
-        if not pg.sprite.collide_rect(self, self.game_state.player):
-            self.pos += self.speed * self.dir
-            self.rect.center = self.pos.x, self.pos.y
 
-        # wall collision detection
-        while not pg.sprite.spritecollideany(self, self.game_state.walls) is None:
-            self.pos -= self.speed * self.dir
-            self.rect.center = self.pos.x, self.pos.y
-            # algorithm to include sliding along walls
-            # 0: left, 1: up, 2: right, 3: down
-            adj = [Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)]
-            collision_side = -1
-            for i, x in enumerate(adj):
-                adj_pos = self.pos + self.speed * x
-                self.rect.center = adj_pos.x, adj_pos.y
-                if pg.sprite.spritecollideany(self, self.game_state.walls):
-                    collision_side = i
-
-            if collision_side % 2 == 0:
-                # allow movement at normal speed by normalizing vectors
-                self.pos += self.speed * Vector2(0, self.dir.y).normalize()
-            else:
-                self.pos += self.speed * Vector2(self.dir.x, 0).normalize()
-            self.rect.center = self.pos.x, self.pos.y
-
-        self.dir.update(0, 0)
-
-    def on_damage(self, damage, source):
-        """Behavior when enemy takes damage."""
-        self.damaged = True
-
-
-class Melee(Enemy):
+class Melee(Pathfinder):
     """
     Melee enemy class that can attack the player within a certain melee range.
     """
-    def __init__(self, group, game_state, pos, size, steering_rate, speed, health, melee_range):
-        super().__init__(group, game_state, pos, size, steering_rate, speed, health)
+    def __init__(self, group, game_state, pos, speed, health, melee_range):
+        super().__init__(group, game_state, pos, None, speed, health)
         # range of melee attacks in pixels
         self.melee_range = melee_range
 
     def update(self):
         # pathfinds to the player
         self.path_find_to_player()
+
         # steer towards nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.melee_range)
         self.image.fill((100, 100, 100))
+
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
@@ -172,28 +183,21 @@ class Melee(Enemy):
         self.attack()
         self.frame_counter += 1
         if self.health <= 0:
-            self.kill()
+            self.death_behavior()
 
     def attack(self):
         """Attacks player within a certain range."""
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.melee_range * self.melee_range:
             pass
 
-    def on_damage(self, source):
-        self.damaged = True
-        self.damage_frame = self.frame_counter
-        self.damage_source = source
-        self.health -= self.damage_source.damage
-        self.damage_source.on_damage(self)
 
-class FireMage(Enemy):
+class FireMage(Pathfinder):
     """
     Fire mage enemy class that can attack the player at range.
     """
-    def __init__(self, group, game_state, pos, size, steering_rate, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, size, steering_rate, speed, health)
+    def __init__(self, group, game_state, pos, speed, health, range, attack_list):
+        super().__init__(group, game_state, pos, ShootFireBall(self, attack_list, attack_list), speed, health)
         self.range = range
-        self.ability = ShootFireBall(self, attack_list, attack_list)
 
     def update(self):
         # pathfinds to the player
@@ -202,11 +206,17 @@ class FireMage(Enemy):
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
+        self.image.fill((100, 100, 100))
+
+        if self.damaged:
+            self.damage_source.damaging(self)
+            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
+                self.damaged = False
         self.move()
         self.attack()
         self.frame_counter += 1
         if self.health <= 0:
-            self.kill()
+            self.death_behavior()
 
     def activate_ability(self):
         self.ability.activate((self.game_state.player.pos - self.pos).normalize())
