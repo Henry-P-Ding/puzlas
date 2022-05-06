@@ -23,6 +23,9 @@ class Player(AbilityEntity):
                          pos=Vector2(200, 200),
                          images=[pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in [pg.image.load("assets/player/tile{0}.png".format(x)) for x in ["000", "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "024", "025", "026"]]],
                          health=100)
+        # hit box for walls only, allows the "head" of the player to be drawn above walls
+        self.wall_hit_box = pg.Rect(self.hit_box.x, self.hit_box.y + self.hit_box.height / 2,
+                                    self.hit_box.width, self.hit_box.height / 2)
         # direction of player movement, always a unit vector
         self.dir = Vector2(0, 0)
         # different walking animations
@@ -34,20 +37,26 @@ class Player(AbilityEntity):
         self.slash_counter = 0
         self.ability = None
 
+    @staticmethod
+    def wall_collided(player, wall):
+        return player.wall_hit_box.colliderect(wall.hit_box)
+
     def update(self):
-        if self.dir.length_squared() != 0:
-            self.dir.normalize()
+        self.dir = Vector2(self.game_state.controls.key_presses[pg.K_d] - self.game_state.controls.key_presses[pg.K_a],
+                           self.game_state.controls.key_presses[pg.K_s] - self.game_state.controls.key_presses[pg.K_w])
+        if self.dir.magnitude_squared() != 0:
+            self.dir = self.dir.normalize()
         # movement
-        if not self.slashing:
-            self.vel = Player.SPEED * self.dir
-            self.pos += self.vel
-        self.hit_box.center = self.pos.x, self.pos.y
+        self.vel = Player.SPEED * self.dir
+        self.pos += self.vel
+
+        self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 4
 
         # wall collision check with player hit box specifically
-        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
-            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Player.wall_collided) is not None:
+            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Player.wall_collided) is not None:
                 self.pos -= self.dir
-                self.hit_box.center = self.pos.x, self.pos.y
+                self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 4
             # algorithm to include sliding along walls
             # 0: left, 1: up, 2: right, 3: down
             adj = [Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)]
@@ -55,8 +64,8 @@ class Player(AbilityEntity):
             y_collision = False
             for i, x in enumerate(adj):
                 adj_pos = self.pos + Player.SPEED * x
-                self.hit_box.center = adj_pos.x, adj_pos.y
-                if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided):
+                self.wall_hit_box.center = adj_pos.x, adj_pos.y + self.hit_box.height / 4
+                if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Player.wall_collided):
                     if i % 2 == 0:
                         x_collision = True
                     else:
@@ -71,7 +80,8 @@ class Player(AbilityEntity):
                 self.pos += self.vel
             else:
                 self.vel = Vector2(0, 0)
-            self.hit_box.center = self.pos.x, self.pos.y
+            self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 4
+        self.hit_box.center = self.pos.x, self.pos.y
 
         # activates player ability
         if self.ability_active:
@@ -86,7 +96,10 @@ class Player(AbilityEntity):
         self.animate()
 
         # reset direction vector
-        self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
+        self.rect.center = self.pos.x, self.pos.y
+
+        if self.health <= 0:
+            self.death_behavior()
 
     def animate(self):
         # TODO: remove hardcoded moduli
@@ -116,7 +129,7 @@ class Player(AbilityEntity):
     def switch_image(self, image):
         self.image = image
         self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
+        self.rect.center = self.pos.x, self.pos.y
 
     def check_screen_bounds(self):
         """manages behavior if player collides with edge of screen"""
@@ -133,3 +146,17 @@ class Player(AbilityEntity):
     def add_dir(self, v):
         """Adds vector to player direction"""
         self.dir += v
+
+    def on_damage(self, source):
+        """Behavior when enemy takes damage."""
+        self.damaged = True
+        self.damage_frame = self.frame_counter
+        self.damage_source = source
+        self.health -= self.damage_source.damage
+        self.damage_source.on_damage(self)
+
+    def death_behavior(self):
+        print('game lost')
+        # TODO: make a game over scree
+        self.game_state.game.stop()
+

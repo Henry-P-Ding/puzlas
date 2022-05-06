@@ -18,9 +18,7 @@ class Entity(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.hit_box = self.rect.copy()
         # offset between sprite rectangle center and pos/hit box center
-        # TODO: add dict between sprite frames and offsets
-        self.offset = Vector2(0, 0)
-        self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
+        self.rect.center = self.pos.x, self.pos.y
         self.hit_box = self.rect.copy()
         self.frame_counter = 0
 
@@ -35,9 +33,14 @@ class HealthEntity(Entity):
     def __init__(self, group, game_state, pos, images, health):
         super().__init__(group, game_state, pos, images)
         self.health = health
+        self.damaged = False
+        self.damage_source = None
+        self.damage_frame = self.frame_counter
+
+    def on_damage(self, source):
+        pass
 
     def death_behavior(self):
-        print(f'{self} died')
         self.kill()
 
 
@@ -51,3 +54,9 @@ class AbilityEntity(HealthEntity):
     def set_ability_active(self, val):
         assert isinstance(val, bool), "Must change ability_active to only bool"
         self.ability_active = val
+
+    def death_behavior(self):
+        new_ability = self.ability.create_copy(self.game_state.player, [self.game_state.enemies, self.game_state.walls],
+                                               [self.game_state.enemies])
+        self.game_state.player.ability = new_ability
+        self.kill()

@@ -10,8 +10,6 @@ class Enemy(AbilityEntity):
     """
     Generic enemies class that attacks player
     """
-    # cooldown before enemy can take damage again TODO: does this belong here?
-    DAMAGE_COOLDOWN = 30
 
     def __init__(self, group, game_state, pos, ability, speed, health):
         super().__init__(group, game_state, pos, [pg.Surface([48, 64])], health, ability=ability)
@@ -20,11 +18,6 @@ class Enemy(AbilityEntity):
         self.speed = speed
         # movement direction
         self.dir = Vector2(0, 0)
-        # recently taken damage
-        # TODO move to health ability class
-        self.damaged = False
-        self.damage_source = None
-        self.damage_frame = self.frame_counter;
 
     def update(self):
         self.frame_counter += 1
@@ -85,7 +78,7 @@ class Enemy(AbilityEntity):
             self.hit_box.center = self.pos.x, self.pos.y
 
         self.dir.update(0, 0)
-        self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
+        self.rect.center = self.pos.x, self.pos.y
 
     def on_damage(self, source):
         """Behavior when enemy takes damage."""
@@ -193,10 +186,10 @@ class Melee(Pathfinder):
 
 class FireMage(Pathfinder):
     """
-    Fire mage enemy class that can attack the player at range.
+    Fire mage enemy class that can attack the player at range with a fire ball ability.
     """
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootFireBall(self, attack_list, attack_list), speed, health)
+        super().__init__(group, game_state, pos, ShootFireball(self, attack_list, attack_list), speed, health)
         self.range = range
 
     def update(self):
@@ -226,3 +219,77 @@ class FireMage(Pathfinder):
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
 
+
+class RootMage(Pathfinder):
+    """
+    Root mage enemy class that can attack the player at range with a root ability.
+    """
+
+    def __init__(self, group, game_state, pos, speed, health, range, attack_list):
+        super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health)
+        self.range = range
+
+    def update(self):
+        # TODO: add this to a ranged enemy class?
+        # pathfinds to the player
+        self.path_find_to_player()
+        # steer towards nearest node if it can path to the player
+        if len(self.pathing_nodes) > 0:
+            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
+                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
+        self.image.fill((100, 100, 100))
+
+        if self.damaged:
+            self.damage_source.damaging(self)
+            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
+                self.damaged = False
+        self.move()
+        self.attack()
+        self.frame_counter += 1
+        if self.health <= 0:
+            self.death_behavior()
+
+    def activate_ability(self):
+        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
+
+    def attack(self):
+        """Attacks player within a certain range."""
+        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+            self.activate_ability()
+
+
+class HookMage(Pathfinder):
+    """
+    Hook mage enemy class that can attack the player at range with a hook ability.
+    """
+
+    def __init__(self, group, game_state, pos, speed, health, range, attack_list):
+        super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health)
+        self.range = range
+
+    def update(self):
+        # pathfinds to the player
+        self.path_find_to_player()
+        # steer towards nearest node if it can path to the player
+        if len(self.pathing_nodes) > 0:
+            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
+                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
+        self.image.fill((100, 100, 100))
+
+        if self.damaged:
+            self.damage_source.damaging(self)
+            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
+                self.damaged = False
+        self.move()
+        self.attack()
+        self.frame_counter += 1
+        if self.health <= 0:
+            self.death_behavior()
+
+    def activate_ability(self):
+        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
+
+    def attack(self):
+        """Attacks player within a certain range."""
+        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+            self.activate_ability()

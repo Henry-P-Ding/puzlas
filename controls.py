@@ -37,17 +37,23 @@ class Controls:
 class PlayingControls(Controls):
     def __init__(self, game):
         super().__init__(game)
+        self.key_presses = {
+            pg.K_d: False,
+            pg.K_a: False,
+            pg.K_w: False,
+            pg.K_s: False
+        }
         self.event_maps["key_down"] = {
-            pg.K_d: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(1, 0)),
-            pg.K_a: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),
-            pg.K_w: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, -1)),
-            pg.K_s: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, 1)),
+            pg.K_d: lambda: self.set_pressed_map(pg.K_d, True),
+            pg.K_a: lambda: self.set_pressed_map(pg.K_a, True),
+            pg.K_w: lambda: self.set_pressed_map(pg.K_w, True),
+            pg.K_s: lambda: self.set_pressed_map(pg.K_s, True)
         }
         self.event_maps["key_up"] = {
-            pg.K_d: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),
-            pg.K_a: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(1, 0)),
-            pg.K_w: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, 1)),
-            pg.K_s: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, -1)),
+            pg.K_d: lambda: self.set_pressed_map(pg.K_d, False),
+            pg.K_a: lambda: self.set_pressed_map(pg.K_a, False),
+            pg.K_w: lambda: self.set_pressed_map(pg.K_w, False),
+            pg.K_s: lambda: self.set_pressed_map(pg.K_s, False),
             pg.K_ESCAPE: lambda: self.game.game_state_manager.enter_state_from_pool("pause_menu")
         }
         self.event_maps["mouse_down"] = {
@@ -56,6 +62,9 @@ class PlayingControls(Controls):
         self.event_maps["mouse_up"] = {
             pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_ability_active(False)
         }
+
+    def set_pressed_map(self, key, val):
+        self.key_presses[key] = val
 
 
 class StartMenuControls(Controls):

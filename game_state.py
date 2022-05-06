@@ -4,6 +4,31 @@ from entity.player import *
 from gui import *
 
 
+class VerticalOrderSprites(pg.sprite.Group):
+    def get_y(self, spr):
+        return spr.pos.y
+
+    def draw(self, surface):
+        """Source: RenderUpdates pygame class"""
+        surface_blit = surface.blit
+        dirty = self.lostsprites
+        self.lostsprites = []
+        dirty_append = dirty.append
+        for sprite in sorted(self.sprites(), key=self.get_y):
+            old_rect = self.spritedict[sprite]
+            new_rect = surface_blit(sprite.image, sprite.rect)
+            if old_rect:
+                if new_rect.colliderect(old_rect):
+                    dirty_append(new_rect.union(old_rect))
+                else:
+                    dirty_append(new_rect)
+                    dirty_append(old_rect)
+            else:
+                dirty_append(new_rect)
+            self.spritedict[sprite] = new_rect
+        return dirty
+
+
 class GameStateManager:
     """
     Manages switching between different game states.
@@ -61,8 +86,8 @@ class GameState:
 
     def loop(self):
         """Game state loop, runs input(), update(), and render() steps"""
-        self.input()
         self.render()
+        self.input()
         self.update()
         self.game.time_delta = self.game.clock.tick(self.game.fps)
 
@@ -107,11 +132,16 @@ class PlayingState(GameState):
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
         self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
-        self.background.fill((0, 0, 0))
+        self.background.fill((86, 125, 70))
         # level creator
         self.level_creator = LevelCreator(self, Vector2(0, 0))
+        # sets all_sprites group to draw by order of y_position
+        self.all_sprites = VerticalOrderSprites()
         # player
         self.player = Player(self.all_sprites, self)
+        # player sprite group
+        self.player_group = pg.sprite.Group()
+        self.player_group.add(self.player)
         # wall sprites for collision
         self.walls = pg.sprite.Group()
         # enemy sprites
@@ -121,8 +151,11 @@ class PlayingState(GameState):
 
         # example level
         self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
-        #self.player.ability = MeleeAbility(self.player, [self.walls, self.enemies], [self.enemies], 32)
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
+
+    def load(self):
+        self.game.screen.blit(self.background, (0, 0))
+        pg.display.update()
 
     def update(self):
         """Updates all game objects based on input."""

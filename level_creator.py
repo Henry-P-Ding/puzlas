@@ -19,6 +19,8 @@ class LevelCreator:
             "P": self.place_player,
             "M": self.place_melee,
             "F": self.place_fire_mage,
+            "R": self.place_root_mage,
+            "H": self.place_hook_mage
         }
 
     def create_level(self, level_data):
@@ -74,4 +76,26 @@ class LevelCreator:
                                              speed=3,
                                              health=50,
                                              range=200,
-                                             attack_list=[self.game_state.walls, self.game_state.player]))
+                                             attack_list=[self.game_state.walls, self.game_state.player_group]))
+
+    def place_root_mage(self, tile_x, tile_y):
+        """Places fire mage enemy at tile location."""
+        self.game_state.enemies.add(RootMage(group=self.game_state.all_sprites,
+                                             game_state=self.game_state,
+                                             pos=Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size, (2 * tile_y + 1) / 2 * self.game_state.tile_size),
+                                             speed=3,
+                                             health=50,
+                                             range=200,
+                                             attack_list=[self.game_state.walls, self.game_state.player_group]))
+
+    def place_hook_mage(self, tile_x, tile_y):
+        """Places fire mage enemy at tile location."""
+        self.game_state.enemies.add(HookMage(group=self.game_state.all_sprites,
+                                             game_state=self.game_state,
+                                             pos=Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size, (2 * tile_y + 1) / 2 * self.game_state.tile_size),
+                                             speed=3,
+                                             health=50,
+                                             range=200,
+                                             attack_list=[self.game_state.walls, self.game_state.player_group]))
+
+
