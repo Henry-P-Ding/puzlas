@@ -28,7 +28,6 @@ class Entity(pg.sprite.Sprite):
     def animate(self):
         pass
 
-
 class HealthEntity(Entity):
     def __init__(self, group, game_state, pos, images, health):
         super().__init__(group, game_state, pos, images)
