@@ -30,13 +30,13 @@ class Entity(pg.sprite.Sprite):
     def animate(self):
         pass
 
-
 class HealthEntity(Entity):
     def __init__(self, group, game_state, pos, images, health):
         super().__init__(group, game_state, pos, images)
         self.health = health
 
     def death_behavior(self):
+        import entity.ability as ShootFireball
         print(f'{self} died')
         self.kill()
 
@@ -51,3 +51,4 @@ class AbilityEntity(HealthEntity):
     def set_ability_active(self, val):
         assert isinstance(val, bool), "Must change ability_active to only bool"
         self.ability_active = val
+

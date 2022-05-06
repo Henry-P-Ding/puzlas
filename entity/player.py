@@ -33,10 +33,42 @@ class Player(AbilityEntity):
         self.slashing = False
         self.slash_counter = 0
         self.ability = None
+        self.total_health = 1000
+        self.health_bar_length = 400
+        self.health_ratio = self.total_health/self.health_bar_length
+        self.target_health = 500
+        self.health_change_speed= 5
+
+    def get_damage(self,amount):
+        if self.target_health >0:
+            self.target_health -= amount
+        if self.target_health <=0:
+            self.target_health = 0
+
+    def advanced_health(self):
+        transition_width = 0
+        transition_color = (255,0,0)
+        if self.health < self.target_health: # Gain Health
+            self.health += self.health_change_speed
+            transition_width = int((self.target_health - self.health)/self.health_ratio)
+            transition_color = (0,255,0)
+        if self.health > self.target_health: # Lose Health
+            self.health -= self.health_change_speed
+            transition_width = int((self.target_health - self.health)/self.health_ratio)
+            transition_color = (255,255,0)
+
+            health_bar_rect = pg.Rect(90, 80, self.health/self.health_ratio, 25)
+            transition_bar_rect = pg.Rect(health_bar_rect.right, 45, transition_width, 25)
+
+            pg.draw.rect(self.game_state.game.screen, (255, 0, 0), health_bar_rect)
+            pg.draw.rect(self.game_state.game.screen, transition_color, transition_bar_rect)
+            pg.draw.rect(self.game_state.game.screen, (255,255,255), (90, 80, self.health_bar_length, 25), 4)
+
 
     def update(self):
         if self.dir.length_squared() != 0:
             self.dir.normalize()
+        self.advanced_health()
         # movement
         if not self.slashing:
             self.vel = Player.SPEED * self.dir
@@ -87,7 +119,6 @@ class Player(AbilityEntity):
 
         # reset direction vector
         self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
-
     def animate(self):
         # TODO: remove hardcoded moduli
         """Animates player sprite."""

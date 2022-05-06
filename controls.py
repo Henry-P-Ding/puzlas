@@ -42,6 +42,7 @@ class PlayingControls(Controls):
             pg.K_a: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),
             pg.K_w: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, -1)),
             pg.K_s: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(0, 1)),
+            pg.K_v: lambda: self.game.game_state_manager.current_state().player.get_damage(200) #BROPKLEN
         }
         self.event_maps["key_up"] = {
             pg.K_d: lambda: self.game.game_state_manager.current_state().player.add_dir(pg.math.Vector2(-1, 0)),

@@ -1,8 +1,10 @@
 import pygame as pg
+
 from pygame.math import *
 from entity.ability import *
 from entity.game_entity import AbilityEntity
 from entity.game_entity import Entity
+
 
 
 class Enemy(AbilityEntity):
@@ -24,10 +26,12 @@ class Enemy(AbilityEntity):
         # TODO move to health ability class
         self.damaged = False
         self.damage_source = None
-        self.damage_frame = self.frame_counter;
+        self.damage_frame = self.frame_counter
+
 
     def update(self):
         self.frame_counter += 1
+
 
     def attack(self):
         pass
