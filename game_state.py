@@ -121,7 +121,8 @@ class PlayingState(GameState):
 
         # example level
         self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
-        self.player.ability = ShootHook(self.player, [self.walls, self.enemies], [self.enemies])
+        #self.player.ability = MeleeAbility(self.player, [self.walls, self.enemies], [self.enemies], 32)
+        self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
     def update(self):
         """Updates all game objects based on input."""
@@ -145,9 +146,7 @@ class PlayingState(GameState):
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
 
 
-class StartMenu(GameState):
-    # delay between consecutive key presses on the start menu
-    # TODO: make this key-release instead
+class SelectionMenu(GameState):
 
     def __init__(self, game, name):
         super().__init__(game, name)
@@ -155,18 +154,45 @@ class StartMenu(GameState):
         self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
         self.background.fill((0, 0, 0))
         # sprites
-        self.all_sprites = pg.sprite.RenderUpdates()
         self.selector = None
-        self.buttons = {}
-        # selected option out of start options
         self.selection = 0
+        self.selections = None
+
+    def load(self):
+        pass
+
+    def activate_selection(self):
+        """Activates selected button's defined function."""
+        self.selections[self.selection].function()
+
+    def update_selection(self, i):
+        """Changes selected button based on key presses."""
+        # switching delay
+        self.selection += i
+        # ensures selection is within bounds
+        if not 0 <= self.selection < len(self.selections):
+            self.selection -= i
+            return
+        # moves selector sprite
+        self.selector.change_selection(self.selections[self.selection].pos)
+        # resets switching frame delay
+
+    def exit(self):
+        """Kills all sprites when exiting start menu, since not many sprites are present."""
+        self.all_sprites.empty()
+
+
+class StartMenu(SelectionMenu):
+
+    def __init__(self, game, name):
+        super().__init__(game, name)
         # sets controls
         self.controls = controls.StartMenuControls(self.game)
 
     def load(self):
         self.game.screen.blit(self.background, (0, 0))
         pg.display.update(self.background.get_rect())
-        self.buttons = [
+        self.selections = [
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
                    "play game", lambda: self.game.game_state_manager.switch_state_from_pool("playing")),
             Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 200), 30, (200, 200, 200),
@@ -178,29 +204,8 @@ class StartMenu(GameState):
         self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
         self.selection = 0
 
-    def activate_selection(self):
-        """Activates selected button's defined function."""
-        self.buttons[self.selection].function()
 
-    def update_selection(self, i):
-        """Changes selected button based on key presses."""
-        # switching delay
-        self.selection += i
-        # ensures selection is within bounds
-        if not 0 <= self.selection < len(self.buttons):
-            self.selection -= i
-            return
-        # moves selector sprite
-        self.selector.change_selection(self.buttons[self.selection].pos)
-        # resets switching frame delay
-
-    def exit(self):
-        """Kills all sprites when exiting start menu, since not many sprites are present."""
-        self.all_sprites.empty()
-
-
-# TODO: inherit selection game state class for both StartMenu and PauseMenu
-class PauseMenu(GameState):
+class PauseMenu(SelectionMenu):
     # intensity of black tint on screen during pause menu
     TINT = 150
 

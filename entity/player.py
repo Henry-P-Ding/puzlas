@@ -13,7 +13,8 @@ class Player(AbilityEntity):
     DISPLAY_SIZE = (60, 80)
     ANIMATION_SPEED = {
         "standing": 12,
-        "moving": 3
+        "moving": 3,
+        "slashing": 5
     }
 
     def __init__(self, group, game_state):
@@ -28,14 +29,18 @@ class Player(AbilityEntity):
         self.facing_right = True
         # checks whether ability is active or not
         self.ability_active = False
+        # melee slash
+        self.slashing = False
+        self.slash_counter = 0
         self.ability = None
 
     def update(self):
         if self.dir.length_squared() != 0:
             self.dir.normalize()
         # movement
-        self.vel = Player.SPEED * self.dir
-        self.pos += self.vel
+        if not self.slashing:
+            self.vel = Player.SPEED * self.dir
+            self.pos += self.vel
         self.hit_box.center = self.pos.x, self.pos.y
 
         # wall collision check with player hit box specifically
@@ -81,13 +86,23 @@ class Player(AbilityEntity):
         self.animate()
 
         # reset direction vector
-        #self.dir.update(0, 0)
         self.rect.center = self.pos.x + self.offset.x, self.pos.y + self.offset.y
 
     def animate(self):
         # TODO: remove hardcoded moduli
         """Animates player sprite."""
-        if self.vel.length_squared() != 0:
+        if self.slashing:
+            self.facing_right = (self.game_state.mouse_pos - self.pos).x > 0
+            if self.slash_counter > 0:
+                if self.facing_right:
+                    self.switch_image(self.images[((self.slash_counter // Player.ANIMATION_SPEED["slashing"]) % 3) + 12])
+                else:
+                    self.switch_image(pg.transform.flip(
+                        self.images[((self.slash_counter // Player.ANIMATION_SPEED["slashing"]) % 3) + 12], True, False))
+                self.slash_counter -= 1
+            else:
+                self.slashing = False
+        elif self.vel.length_squared() != 0:
             if self.facing_right:
                 self.switch_image(self.images[((self.frame_counter // Player.ANIMATION_SPEED["moving"]) % 6) + 6])
             else:
