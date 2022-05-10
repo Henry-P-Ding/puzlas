@@ -137,6 +137,8 @@ class PlayingState(GameState):
         self.level_creator = LevelCreator(self, Vector2(0, 0))
         # sets all_sprites group to draw by order of y_position
         self.all_sprites = VerticalOrderSprites()
+        # gui sprites
+        self.gui_sprites = pg.sprite.RenderUpdates()
         # player
         self.player = Player(self.all_sprites, self)
         # player sprite group
@@ -161,6 +163,8 @@ class PlayingState(GameState):
         """Updates all game objects based on input."""
         # updates game sprites
         self.all_sprites.update()
+        # updates gui sprites
+        self.gui_sprites.update()
 
         # check if need to switch stage
         screen_bound = self.player.check_screen_bounds()
@@ -177,6 +181,19 @@ class PlayingState(GameState):
                 self.player.pos.x = screen_bound.x % self.game.window_size[0]
             elif screen_bound.y != 0:
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
+
+    def render(self):
+        # TODO: add gui group to generic game state so this isn't needed to be overwritten
+        """Renders all game objects."""
+        # clears sprites from the screen
+        self.all_sprites.clear(self.game.screen, self.background)
+        # pygame rectangles for all sprites to be updated on the game screen
+        sprite_rects = self.all_sprites.draw(self.game.screen)
+        # gui updates
+        self.gui_sprites.clear(self.game.screen, self.background)
+        gui_rects = self.gui_sprites.draw(self.game.screen)
+        # updates only areas of the screen that have changed
+        pg.display.update(sprite_rects + gui_rects)
 
 
 class SelectionMenu(GameState):
@@ -237,7 +254,7 @@ class StartMenu(SelectionMenu):
         self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
         self.selection = 0
 
-
+# TODO: change this to using GUI sprites
 class PauseMenu(SelectionMenu):
     # intensity of black tint on screen during pause menu
     TINT = 150

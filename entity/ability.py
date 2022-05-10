@@ -147,11 +147,17 @@ class Fireball(Projectile):
 
     def on_damage(self, entity):
         # TODO make this look better with pixel art
-        entity.image.fill((255, 255, 255))  # flashes sprite white when projectile hits it
+        on_damage_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        on_damage_image.blit(entity.image, (0, 0))
+        on_damage_image.fill((255, 255, 255, 200)) # flashes sprite white when projectile hits it
+        entity.image = on_damage_image
 
     def damaging(self, entity):
         # TODO: make the enemy light on fire
-        entity.image.fill((255, 0, 0))
+        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        damaging_image.blit(entity.image, (0, 0))
+        damaging_image.fill((255, 0, 0, 200))  # flashes sprite white when projectile hits it
+        entity.image = damaging_image
         if entity.frame_counter % 60 == 0:
             # burns enemy for damage over time
             entity.health -= 2
@@ -168,14 +174,22 @@ class Root(Projectile):
 
     # TODO: add animations for root effect
     def on_damage(self, entity):
-        entity.image.fill((255, 255, 255))
+        # TODO make this look better with pixel art
+        flashing_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        flashing_image.blit(entity.image, (0, 0))
+        flashing_image.fill((255, 255, 255, 200))  # flashes sprite white when projectile hits it
+        entity.image = flashing_image
 
     def damaging(self, entity):
         # TODO: make the enemy caged in a root animation
-        entity.image.fill((255, 255, 0))
+        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        damaging_image.blit(entity.image, (0, 0))
+        damaging_image.fill((255, 255, 0, 40))  # flashes sprite white when projectile hits it
+        entity.image = damaging_image
         # all entity movement is stopped when rooted.
         entity.vel = Vector2(0, 0)
         entity.dir = Vector2(0, 0)
+        print(entity.dir)
 
 
 class Hook(Projectile):
@@ -188,12 +202,18 @@ class Hook(Projectile):
         self.image.fill((0, 255, 0))
 
     def on_damage(self, entity):
-        # TODO: add art whwen enemy is hooked
-        # flashes white when entity is hit
-        entity.image.fill((255, 255, 255))
+        # TODO make this look better with pixel art
+        flashing_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        flashing_image.blit(entity.image, (0, 0))
+        flashing_image.fill((255, 255, 255, 200))  # flashes sprite white when projectile hits it
+        entity.image = flashing_image
 
     def damaging(self, entity):
         # TODO: change animation mode of the sprite to be flailing
+        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
+        damaging_image.blit(entity.image, (0, 0))
+        damaging_image.fill((0, 255, 0, 200))  # flashes sprite white when projectile hits it
+        entity.image = damaging_image
         # moves towards the hook source for 6 seconds
         entity.dir = -6 * self.vel.normalize()
 

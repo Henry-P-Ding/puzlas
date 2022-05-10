@@ -49,3 +49,37 @@ class Box(pg.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos.x, self.pos.y
+
+
+class IndicatorBar(pg.sprite.Sprite):
+    def __init__(self, group, pos, size, border_width, indicator, indicator_max, bar_color, background_color, border_color, left_centered=True):
+        super().__init__(group)
+        # left size of the bar
+        self.pos = pos
+        self.size = size
+        self.indicator = indicator
+        self.indicator_max = indicator_max
+        # rect object for border around health bar
+        self.border_color = border_color
+        self.border_width = border_width
+        self.border_corners = [(0, 0), (size.x + 2 * self.border_width, 0), (size.x + 2 * self.border_width, size.y + 2 * self.border_width), (0, size.y + 2 * self.border_width)]
+        # rect object for health bar
+        self.bar_color = bar_color
+        self.background_color = background_color
+        self.bar_rect = pg.Rect(self.border_width, self.border_width, self.indicator / self.indicator_max * size.x,
+                                size.y)
+        self.image = pg.Surface((size.x + 2 * self.border_width, size.y + 2 * self.border_width), pg.SRCALPHA)
+        self.rect = self.image.get_rect()
+        if left_centered:
+            self.rect.midleft = self.pos
+        else:
+            self.rect.midright = self.pos
+
+    def update(self):
+        self.bar_rect.width = self.indicator / self.indicator_max * self.size.x
+        self.image.fill(self.background_color)
+        pg.draw.rect(self.image, self.bar_color, self.bar_rect)
+        pg.draw.lines(self.image, self.border_color, True, self.border_corners, 2 * self.border_width + 1)
+
+    def change_indicator(self, value):
+        self.indicator = value

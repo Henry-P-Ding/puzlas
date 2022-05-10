@@ -2,6 +2,7 @@ import pygame as pg
 from pygame.math import *
 from entity.game_entity import AbilityEntity
 from entity.game_entity import Entity
+from gui import *
 
 
 class Player(AbilityEntity):
@@ -13,7 +14,7 @@ class Player(AbilityEntity):
     DISPLAY_SIZE = (60, 80)
     ANIMATION_SPEED = {
         "standing": 12,
-        "moving": 3,
+        "moving": 4,
         "slashing": 5
     }
 
@@ -36,37 +37,18 @@ class Player(AbilityEntity):
         self.slashing = False
         self.slash_counter = 0
         self.ability = None
-        self.total_health = 1000
-        self.health_bar_length = 400
-        self.health_ratio = self.total_health/self.health_bar_length
-        self.target_health = 500
-        self.health_change_speed= 5
 
-    def get_damage(self,amount):
-        if self.target_health >0:
-            self.target_health -= amount
-        if self.target_health <=0:
-            self.target_health = 0
-
-    def advanced_health(self):
-        transition_width = 0
-        transition_color = (255,0,0)
-        if self.health < self.target_health: # Gain Health
-            self.health += self.health_change_speed
-            transition_width = int((self.target_health - self.health)/self.health_ratio)
-            transition_color = (0,255,0)
-        if self.health > self.target_health: # Lose Health
-            self.health -= self.health_change_speed
-            transition_width = int((self.target_health - self.health)/self.health_ratio)
-            transition_color = (255,255,0)
-
-            health_bar_rect = pg.Rect(90, 80, self.health/self.health_ratio, 25)
-            transition_bar_rect = pg.Rect(health_bar_rect.right, 45, transition_width, 25)
-
-            pg.draw.rect(self.game_state.game.screen, (255, 0, 0), health_bar_rect)
-            pg.draw.rect(self.game_state.game.screen, transition_color, transition_bar_rect)
-            pg.draw.rect(self.game_state.game.screen, (255,255,255), (90, 80, self.health_bar_length, 25), 4)
-
+        # player health bar
+        self.max_health = 100
+        self.health_bar = IndicatorBar(group=self.game_state.gui_sprites,
+                                       pos=Vector2(16, 32),
+                                       size=Vector2(256, 32),
+                                       border_width=5,
+                                       indicator=self.health,
+                                       indicator_max=self.max_health,
+                                       bar_color=(255, 0, 0),
+                                       background_color=(255, 255, 255, 100),
+                                       border_color=(255, 255, 255))
 
     @staticmethod
     def wall_collided(player, wall):
@@ -75,10 +57,17 @@ class Player(AbilityEntity):
     def update(self):
         self.dir = Vector2(self.game_state.controls.key_presses[pg.K_d] - self.game_state.controls.key_presses[pg.K_a],
                            self.game_state.controls.key_presses[pg.K_s] - self.game_state.controls.key_presses[pg.K_w])
+
+        self.animate()
+        if self.damaged:
+            self.damage_source.damaging(self)
+            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
+                self.damaged = False
+        self.health_bar.change_indicator(self.health)
+
+        # movement
         if self.dir.magnitude_squared() != 0:
             self.dir = self.dir.normalize()
-        self.advanced_health()
-        # movement
         self.vel = Player.SPEED * self.dir
         self.pos += self.vel
 
@@ -125,9 +114,7 @@ class Player(AbilityEntity):
             self.facing_right = True
         elif self.vel.x < 0:
             self.facing_right = False
-        self.animate()
 
-        # reset direction vector
         self.rect.center = self.pos.x, self.pos.y
 
         if self.health <= 0:
