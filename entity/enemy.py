@@ -11,13 +11,21 @@ class Enemy(AbilityEntity):
     Generic enemies class that attacks player
     """
 
-    def __init__(self, group, game_state, pos, ability, speed, health):
-        super().__init__(group, game_state, pos, [pg.Surface([48, 64])], health, ability=ability)
-        self.image.fill((100, 100, 100))
+    @staticmethod
+    def wall_collided(enemy, wall):
+        return enemy.wall_hit_box.colliderect(wall.hit_box)
+
+    def __init__(self, group, game_state, pos, ability, speed, health, images):
+        super().__init__(group, game_state, pos, images, health, ability=ability)
         # movement speed
         self.speed = speed
         # movement direction
         self.dir = Vector2(0, 0)
+        # hitbox
+        self.hit_box.size = self.game_state.tile_size, self.game_state.tile_size
+        # wall hit box for movement
+        self.wall_hit_box = pg.Rect(self.hit_box.x, self.hit_box.y + self.hit_box.height / 2,
+                                    self.hit_box.width, self.hit_box.height)
 
     def update(self):
         self.frame_counter += 1
@@ -42,16 +50,18 @@ class Enemy(AbilityEntity):
         Movement method
         """
         # movement
+        if self.dir.magnitude_squared() != 0:
+            self.dir = self.dir.normalize()
         self.vel = self.speed * self.dir
         self.pos += self.vel
         self.hit_box.center = self.pos.x, self.pos.y
+        self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 2
 
         # wall collision detection
-        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
-            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Enemy.wall_collided) is not None:
+            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Enemy.wall_collided) is not None:
                 self.pos -= self.dir
-                self.hit_box.center = self.pos.x, self.pos.y
-
+                self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 2
             # algorithm to include sliding along walls
             # 0: left, 1: up, 2: right, 3: down
             adj = [Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)]
@@ -59,8 +69,8 @@ class Enemy(AbilityEntity):
             y_collision = False
             for i, x in enumerate(adj):
                 adj_pos = self.pos + self.speed * x
-                self.hit_box.center = adj_pos.x, adj_pos.y
-                if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided):
+                self.wall_hit_box.center = adj_pos.x, adj_pos.y + self.hit_box.height / 2
+                if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Enemy.wall_collided):
                     if i % 2 == 0:
                         x_collision = True
                     else:
@@ -69,14 +79,17 @@ class Enemy(AbilityEntity):
             # only allow sliding along walls if this is not a corner collision
             if x_collision and not y_collision:
                 self.vel.x = 0
-                self.pos += self.vel.normalize()
+                if self.vel.length_squared() != 0:
+                    self.pos += self.speed * self.vel.normalize()
             elif not x_collision and y_collision:
                 self.vel.y = 0
-                self.pos += self.vel.normalize()
+                if self.vel.length_squared() != 0:
+                    self.pos += self.speed * self.vel.normalize()
             else:
                 self.vel = Vector2(0, 0)
-            self.hit_box.center = self.pos.x, self.pos.y
+            self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 2
 
+        self.hit_box.center = self.pos.x, self.pos.y
         self.dir.update(0, 0)
         self.rect.center = self.pos.x, self.pos.y
 
@@ -90,8 +103,8 @@ class Enemy(AbilityEntity):
 
 
 class Pathfinder(Enemy):
-    def __init__(self, group, game_state, pos, ability, speed, health):
-        super().__init__(group, game_state, pos, ability, speed, health)
+    def __init__(self, group, game_state, pos, ability, speed, health, images):
+        super().__init__(group, game_state, pos, ability, speed, health, images)
         # positions that object is pathing to
         self.pathing_nodes = []
         # tile distances for pathfinding
@@ -153,7 +166,7 @@ class Melee(Pathfinder):
     Melee enemy class that can attack the player within a certain melee range.
     """
     def __init__(self, group, game_state, pos, speed, health, melee_range):
-        super().__init__(group, game_state, pos, None, speed, health)
+        super().__init__(group, game_state, pos, None, speed, health, [pg.Surface((48, 64))])
         # range of melee attacks in pixels
         self.melee_range = melee_range
 
@@ -188,9 +201,28 @@ class FireMage(Pathfinder):
     """
     Fire mage enemy class that can attack the player at range with a fire ball ability.
     """
+    ANIMATION_SPEED = {
+        "standing": 20,
+        "moving": 4,
+        "firing": int(ShootFireball.COOL_DOWN / 4)
+    }
+
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootFireball(self, attack_list, attack_list), speed, health)
+        super().__init__(group, game_state, pos, ShootFireball(self, attack_list, attack_list), speed, health,
+                         [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                          [pg.image.load("assets/fire_mage/fire_mage_{0}.png".format(x)) for x in
+                           ["0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7"
+                            ]]])
         self.range = range
+        self.facing_right = False
+        self.firing = False
 
     def update(self):
         # pathfinds to the player
@@ -199,15 +231,20 @@ class FireMage(Pathfinder):
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.image.fill((100, 100, 100))
 
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
         self.move()
+        self.firing = False
         self.attack()
+        self.animate()
         self.frame_counter += 1
+        if self.vel.x > 0:
+            self.facing_right = True
+        elif self.vel.x < 0:
+            self.facing_right = False
         if self.health <= 0:
             self.death_behavior()
 
@@ -218,7 +255,31 @@ class FireMage(Pathfinder):
         """Attacks player within a certain range."""
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
+            self.firing = True
 
+    def animate(self):
+        # TODO: remove hardcoded moduli and offsets and make this inherited from enemy class
+        """Animates player sprite."""
+        if self.firing:
+            if self.facing_right:
+                self.switch_image(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["firing"]) % 4)])
+            else:
+                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["firing"]) % 4)], True, False))
+        elif self.vel.length_squared() != 0:
+            if self.facing_right:
+                self.switch_image(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["moving"]) % 4) + 4])
+            else:
+                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["moving"]) % 4) + 4], True, False))
+        else:  # staying still animation
+            if self.facing_right:
+                self.switch_image(self.images[(self.frame_counter // FireMage.ANIMATION_SPEED["standing"]) % 4])
+            elif not self.facing_right:  # storing animation
+                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["standing"]) % 4)], True, False))
+
+    def switch_image(self, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos.x, self.pos.y
 
 class RootMage(Pathfinder):
     """
@@ -226,7 +287,8 @@ class RootMage(Pathfinder):
     """
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health)
+        super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health,
+                         [pg.Surface((48, 64))])
         self.range = range
 
     def update(self):
@@ -264,7 +326,8 @@ class HookMage(Pathfinder):
     """
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health)
+        super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health,
+                         [pg.Surface((48, 64))])
         self.range = range
 
     def update(self):

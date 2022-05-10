@@ -121,7 +121,7 @@ class Player(AbilityEntity):
             self.death_behavior()
 
     def animate(self):
-        # TODO: remove hardcoded moduli
+        # TODO: remove hardcoded moduli and offsets
         """Animates player sprite."""
         if self.slashing:
             self.facing_right = (self.game_state.mouse_pos - self.pos).x > 0

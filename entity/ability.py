@@ -8,8 +8,8 @@ import math
 class DamageSource(Entity):
     """Base class for all game entities that do damage."""
 
-    def __init__(self, group, game_state, pos, damage, duration):
-        super().__init__(group, game_state, pos, [pg.Surface((10, 10))])
+    def __init__(self, group, game_state, pos, damage, duration, images):
+        super().__init__(group, game_state, pos, images)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos.x, self.pos.y
         # numerical damage value
@@ -103,12 +103,15 @@ class Projectile(DamageSource):
     Projectile damage source, used for flying objects
     """
 
-    def __init__(self, group, game_state, pos, vel, damage, duration, kill_list, damage_list):
-        super().__init__(group, game_state, pos, damage, duration)
+    def __init__(self, group, game_state, pos, vel, damage, duration, kill_list, damage_list, images):
+        super().__init__(group, game_state, pos, damage, duration, images)
         # movement speed
         self.vel = vel
         # image of projectile
-        self.image.fill((255, 255, 255))
+        if vel.x == 0:
+            self.angle = math.pi / 2 if vel.y > 0 else -math.pi / 2
+        else:
+            self.angle = math.atan(vel.y / vel.x) if vel.x > 0 else math.atan(vel.y / vel.x) + math.pi
         # pygame rectangle of projectile hit box
         self.kill_list = kill_list
         self.damage_list = damage_list
@@ -118,6 +121,8 @@ class Projectile(DamageSource):
         # movement update
         self.pos += self.vel
         self.rect.center = self.pos.x, self.pos.y
+        self.frame_counter += 1
+        self.animate()
         # collision with other sprites
         for sprite in pg.sprite.spritecollide(self, self.game_state.all_sprites, False):
             self.collision_behavior(sprite)
@@ -135,15 +140,25 @@ class Projectile(DamageSource):
                 if hasattr(entity, "on_damage"):
                     entity.on_damage(self)
 
+    def animate(self):
+        pass
+
 
 class Fireball(Projectile):
     """Fireball class"""
     BURN = 120  # time duration of fire damage burning
+    ANIMATION_SPEED = 4
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
-        super().__init__(group, game_state, pos, vel, damage, Fireball.BURN, kill_list, damage_list)
-        # TODO: add fireball image - fix deep copy issue
-        self.image.fill((255, 120, 0))
+        super().__init__(group, game_state, pos, vel, damage, Fireball.BURN, kill_list, damage_list,
+                         [pg.transform.scale(image, (48, 48)) for image in
+                          [pg.image.load("assets/fireball/tile{0}.png".format(x)) for x in
+                           ["000",
+                            "001",
+                            "002",
+                            "003"
+                            ]]])
+        self.hit_box.size = 16, 16
 
     def on_damage(self, entity):
         # TODO make this look better with pixel art
@@ -161,6 +176,17 @@ class Fireball(Projectile):
         if entity.frame_counter % 60 == 0:
             # burns enemy for damage over time
             entity.health -= 2
+
+    def animate(self):
+        # TODO: remove hardcoded moduli and offsets and make this inherited from enemy class
+        """Animates player sprite."""
+        self.switch_image(self.images[(self.frame_counter // Fireball.ANIMATION_SPEED) % 4])
+        self.image = pg.transform.rotate(self.image, -self.angle * 180 / math.pi + 90)
+
+    def switch_image(self, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos.x, self.pos.y
 
 
 class Root(Projectile):
@@ -189,7 +215,6 @@ class Root(Projectile):
         # all entity movement is stopped when rooted.
         entity.vel = Vector2(0, 0)
         entity.dir = Vector2(0, 0)
-        print(entity.dir)
 
 
 class Hook(Projectile):
@@ -247,10 +272,10 @@ class Ability:
 
 
 class ShootFireball(Ability):
-    MAX_FIREBALLS = 15  # maximum number of fireballs on the screen at once
+    MAX_FIREBALLS = 30  # maximum number of fireballs on the screen at once
     SPRAY_ANGLE = 0.1  # angle in radians of spread when shooting
-    FIRE_BALL_SPEED = 10  # speed of shooting fireballs
-    COOL_DOWN = 10  # ability cool down
+    FIRE_BALL_SPEED = 8.15  # speed of shooting fireballs
+    COOL_DOWN = 32  # ability cool down
     DAMAGE = 10  # frieball damage
 
     def __init__(self, sprite, kill_list, damage_list):
