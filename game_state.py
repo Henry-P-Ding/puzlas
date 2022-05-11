@@ -5,7 +5,9 @@ from gui import *
 
 
 class VerticalOrderSprites(pg.sprite.Group):
-    def get_y(self, spr):
+
+    @staticmethod
+    def get_y(spr):
         return spr.pos.y
 
     def draw(self, surface):
@@ -14,7 +16,7 @@ class VerticalOrderSprites(pg.sprite.Group):
         dirty = self.lostsprites
         self.lostsprites = []
         dirty_append = dirty.append
-        for sprite in sorted(self.sprites(), key=self.get_y):
+        for sprite in sorted(self.sprites(), key=VerticalOrderSprites.get_y):
             old_rect = self.spritedict[sprite]
             new_rect = surface_blit(sprite.image, sprite.rect)
             if old_rect:
@@ -99,7 +101,7 @@ class GameState:
             else:
                 self.controls.process_event(event)
 
-        # updates mouse positoin
+        # updates mouse position
         self.mouse_pos = pg.mouse.get_pos()
 
     def update(self):
@@ -166,7 +168,7 @@ class PlayingState(GameState):
         # updates gui sprites
         self.gui_sprites.update()
 
-        # check if need to switch stage
+        # check if game needs to switch stage
         screen_bound = self.player.check_screen_bounds()
         if screen_bound is not None:
             self.level_creator.stage += screen_bound

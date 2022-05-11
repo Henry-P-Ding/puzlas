@@ -28,6 +28,11 @@ class Entity(pg.sprite.Sprite):
     def animate(self):
         pass
 
+    def switch_image(self, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos.x, self.pos.y
+
 
 class HealthEntity(Entity):
     def __init__(self, group, game_state, pos, images, health):

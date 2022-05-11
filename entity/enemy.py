@@ -21,7 +21,7 @@ class Enemy(AbilityEntity):
         self.speed = speed
         # movement direction
         self.dir = Vector2(0, 0)
-        # hitbox
+        # hit box
         self.hit_box.size = self.game_state.tile_size, self.game_state.tile_size
         # wall hit box for movement
         self.wall_hit_box = pg.Rect(self.hit_box.x, self.hit_box.y + self.hit_box.height / 2,
@@ -111,16 +111,18 @@ class Pathfinder(Enemy):
         self.tile_dist = []
 
     def path_find_to_player(self):
-        """Pathfinds to player"""
+        """Path finds to player"""
         self.path_find_to(self.game_state.player)
 
     def path_find_to(self, entity):
-        if not (0 < self.pos.x < self.game_state.game.window_size[0] and 0 < self.pos.y < self.game_state.game.window_size[1]):
+        if not (0 < self.pos.x < self.game_state.game.window_size[0] and 0 < self.pos.y <
+                self.game_state.game.window_size[1]):
             return
         """Pathfinding towards target sprite with BFS"""
         # get positions of player and enemy in tile format
         pos_tile = self.pos // self.game_state.tile_size
-        sprite_tile = Vector2(entity.pos.x % self.game_state.game.window_size[0], entity.pos.y % self.game_state.game.window_size[1]) // self.game_state.tile_size
+        sprite_tile = Vector2(entity.pos.x % self.game_state.game.window_size[0],
+                              entity.pos.y % self.game_state.game.window_size[1]) // self.game_state.tile_size
         # dimensions of the level
         level_size = self.game_state.tile_dim
         # bfs algorithm to pathfinding
@@ -136,7 +138,9 @@ class Pathfinder(Enemy):
                 u = v + move
 
                 # check if is in boundary
-                if self.game_state.level_creator.level[int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)] == "#":
+                if self.game_state.level_creator.level[
+                    int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][
+                    int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)] == "#":
                     continue
 
                 if 0 < u.x < level_size[0] and 0 < u.y < level_size[1] and not visited[int(u.y)][int(u.x)] and \
@@ -152,7 +156,9 @@ class Pathfinder(Enemy):
         while self.tile_dist[int(v.y)][int(v.x)] > 1:
             for move in moves:
                 u = v + move
-                if self.game_state.level_creator.level[int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)] == "#":
+                if self.game_state.level_creator.level[
+                    int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][
+                    int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)] == "#":
                     continue
 
                 if self.tile_dist[int(u.y)][int(u.x)] == self.tile_dist[int(v.y)][int(v.x)] - 1:
@@ -165,16 +171,17 @@ class Melee(Pathfinder):
     """
     Melee enemy class that can attack the player within a certain melee range.
     """
+
     def __init__(self, group, game_state, pos, speed, health, melee_range):
         super().__init__(group, game_state, pos, None, speed, health, [pg.Surface((48, 64))])
         # range of melee attacks in pixels
         self.melee_range = melee_range
 
     def update(self):
-        # pathfinds to the player
+        # path finds to the player
         self.path_find_to_player()
 
-        # steer towards nearest node if it can path to the player
+        # steer towards the nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.melee_range)
@@ -199,12 +206,22 @@ class Melee(Pathfinder):
 
 class FireMage(Pathfinder):
     """
-    Fire mage enemy class that can attack the player at range with a fire ball ability.
+    Fire mage enemy class that can attack the player at range with a fireball ability.
     """
     ANIMATION_SPEED = {
         "standing": 20,
         "moving": 4,
         "firing": int(ShootFireball.COOL_DOWN / 4)
+    }
+    ANIMATION_MODULI = {
+        "standing": 4,
+        "moving": 4,
+        "firing": 4
+    }
+    ANIMATION_OFFSETS = {
+        "standing": 0,
+        "moving": 4,
+        "firing": 0
     }
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
@@ -225,21 +242,21 @@ class FireMage(Pathfinder):
         self.firing = False
 
     def update(self):
-        # pathfinds to the player
+        # path finds to the player
         self.path_find_to_player()
-        # steer towards nearest node if it can path to the player
+        # steer towards the nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-
+        self.animate()
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
+        # TODO: fix enemy getting hooked
         self.move()
         self.firing = False
         self.attack()
-        self.animate()
         self.frame_counter += 1
         if self.vel.x > 0:
             self.facing_right = True
@@ -258,56 +275,87 @@ class FireMage(Pathfinder):
             self.firing = True
 
     def animate(self):
-        # TODO: remove hardcoded moduli and offsets and make this inherited from enemy class
         """Animates player sprite."""
         if self.firing:
+            new_image = self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["firing"]) %
+                                     FireMage.ANIMATION_MODULI["firing"])]
             if self.facing_right:
-                self.switch_image(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["firing"]) % 4)])
+                self.switch_image(new_image)
             else:
-                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["firing"]) % 4)], True, False))
+                self.switch_image(pg.transform.flip(new_image, True, False))
         elif self.vel.length_squared() != 0:
+            new_image = self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["moving"]) %
+                                     FireMage.ANIMATION_MODULI["moving"]) + FireMage.ANIMATION_OFFSETS["moving"]]
             if self.facing_right:
-                self.switch_image(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["moving"]) % 4) + 4])
+                self.switch_image(new_image)
             else:
-                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["moving"]) % 4) + 4], True, False))
+                self.switch_image(pg.transform.flip(new_image, True, False))
         else:  # staying still animation
+            new_image = self.images[(self.frame_counter // FireMage.ANIMATION_SPEED["standing"]) %
+                                    FireMage.ANIMATION_MODULI["standing"]]
             if self.facing_right:
-                self.switch_image(self.images[(self.frame_counter // FireMage.ANIMATION_SPEED["standing"]) % 4])
+                self.switch_image(new_image)
             elif not self.facing_right:  # storing animation
-                self.switch_image(pg.transform.flip(self.images[((self.frame_counter // FireMage.ANIMATION_SPEED["standing"]) % 4)], True, False))
+                self.switch_image(pg.transform.flip(new_image, True, False))
 
-    def switch_image(self, image):
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
 
 class RootMage(Pathfinder):
     """
     Root mage enemy class that can attack the player at range with a root ability.
     """
+    ANIMATION_SPEED = {
+        "standing": 20,
+        "moving": 4,
+        "firing": int(ShootRoot.COOL_DOWN / 4)
+    }
+    ANIMATION_MODULI = {
+        "standing": 4,
+        "moving": 4,
+        "firing": 4
+    }
+    ANIMATION_OFFSETS = {
+        "standing": 0,
+        "moving": 4,
+        "firing": 0
+    }
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
         super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health,
-                         [pg.Surface((48, 64))])
+                         [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                          [pg.image.load("assets/root_mage/root_mage_{0}.png".format(x)) for x in
+                           ["0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7"
+                            ]]])
         self.range = range
+        self.facing_right = False
+        self.firing = False
 
     def update(self):
-        # TODO: add this to a ranged enemy class?
-        # pathfinds to the player
+        # path finds to the player
         self.path_find_to_player()
-        # steer towards nearest node if it can path to the player
+        # steer towards the nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.image.fill((100, 100, 100))
-
+        self.animate()
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
         self.move()
+        self.firing = False
         self.attack()
         self.frame_counter += 1
+        if self.vel.x > 0:
+            self.facing_right = True
+        elif self.vel.x < 0:
+            self.facing_right = False
         if self.health <= 0:
             self.death_behavior()
 
@@ -318,34 +366,90 @@ class RootMage(Pathfinder):
         """Attacks player within a certain range."""
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
+            self.firing = True
+
+    def animate(self):
+        """Animates player sprite."""
+        if self.firing:
+            new_image = self.images[((self.frame_counter // RootMage.ANIMATION_SPEED["firing"]) %
+                                     RootMage.ANIMATION_MODULI["firing"])]
+            if self.facing_right:
+                self.switch_image(new_image)
+            else:
+                self.switch_image(pg.transform.flip(new_image, True, False))
+        elif self.vel.length_squared() != 0:
+            new_image = self.images[((self.frame_counter // RootMage.ANIMATION_SPEED["moving"]) %
+                                     RootMage.ANIMATION_MODULI["moving"]) + RootMage.ANIMATION_OFFSETS["moving"]]
+            if self.facing_right:
+                self.switch_image(new_image)
+            else:
+                self.switch_image(pg.transform.flip(new_image, True, False))
+        else:  # staying still animation
+            new_image = self.images[(self.frame_counter // RootMage.ANIMATION_SPEED["standing"]) %
+                                    RootMage.ANIMATION_MODULI["standing"]]
+            if self.facing_right:
+                self.switch_image(new_image)
+            elif not self.facing_right:  # storing animation
+                self.switch_image(pg.transform.flip(new_image, True, False))
 
 
 class HookMage(Pathfinder):
     """
     Hook mage enemy class that can attack the player at range with a hook ability.
     """
+    ANIMATION_SPEED = {
+        "standing": 20,
+        "moving": 4,
+        "firing": int(ShootRoot.COOL_DOWN / 4)
+    }
+    ANIMATION_MODULI = {
+        "standing": 4,
+        "moving": 4,
+        "firing": 4
+    }
+    ANIMATION_OFFSETS = {
+        "standing": 0,
+        "moving": 4,
+        "firing": 0
+    }
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
         super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health,
-                         [pg.Surface((48, 64))])
+                         [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                          [pg.image.load("assets/hook_mage/hook_mage_{0}.png".format(x)) for x in
+                           ["0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7"
+                            ]]])
         self.range = range
+        self.facing_right = False
+        self.firing = False
 
     def update(self):
-        # pathfinds to the player
+        # path finds to the player
         self.path_find_to_player()
-        # steer towards nearest node if it can path to the player
+        # steer towards the nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
                        Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.image.fill((100, 100, 100))
-
+        self.animate()
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
         self.move()
+        self.firing = False
         self.attack()
         self.frame_counter += 1
+        if self.vel.x > 0:
+            self.facing_right = True
+        elif self.vel.x < 0:
+            self.facing_right = False
         if self.health <= 0:
             self.death_behavior()
 
@@ -356,3 +460,28 @@ class HookMage(Pathfinder):
         """Attacks player within a certain range."""
         if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
+            self.firing = True
+
+    def animate(self):
+        """Animates player sprite."""
+        if self.firing:
+            new_image = self.images[((self.frame_counter // HookMage.ANIMATION_SPEED["firing"]) %
+                                     HookMage.ANIMATION_MODULI["firing"])]
+            if self.facing_right:
+                self.switch_image(new_image)
+            else:
+                self.switch_image(pg.transform.flip(new_image, True, False))
+        elif self.vel.length_squared() != 0:
+            new_image = self.images[((self.frame_counter // HookMage.ANIMATION_SPEED["moving"]) %
+                                     HookMage.ANIMATION_MODULI["moving"]) + HookMage.ANIMATION_OFFSETS["moving"]]
+            if self.facing_right:
+                self.switch_image(new_image)
+            else:
+                self.switch_image(pg.transform.flip(new_image, True, False))
+        else:  # staying still animation
+            new_image = self.images[(self.frame_counter // HookMage.ANIMATION_SPEED["standing"]) %
+                                    HookMage.ANIMATION_MODULI["standing"]]
+            if self.facing_right:
+                self.switch_image(new_image)
+            elif not self.facing_right:  # storing animation
+                self.switch_image(pg.transform.flip(new_image, True, False))

@@ -14,7 +14,7 @@ class DamageSource(Entity):
         self.rect.center = self.pos.x, self.pos.y
         # numerical damage value
         self.damage = damage
-        # duration that other entities are considered in a damage state
+        # duration that other entities are considered in damage state
         self.damage_duration = duration
 
     def on_damage(self, entity):
@@ -25,9 +25,20 @@ class DamageSource(Entity):
         """Loop behavior when sprite is taking damage from this source"""
         pass
 
+    def damage_flash(self, entity, color):
+        """Flashes the entity white to indicate damage"""
+        entity_mask = pg.mask.from_surface(entity.image)
+        damage_mask = entity_mask.to_surface(setcolor=color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(200)
+        entity.image = entity.image.copy()
+        entity.image.blit(damage_mask, (0, 0))
+
 
 class MeleeAttack(DamageSource):
     """Melee attack damage source - damages entities within a sector"""
+    DAMAGE_FLASH_TIME = 4  # time duration of white flash when damaged
+    DAMAGE_FLASH_COLOR = (255, 255, 255)
 
     @staticmethod
     def sector_collide(attack, entity):
@@ -52,7 +63,7 @@ class MeleeAttack(DamageSource):
         return False
 
     def __init__(self, group, game_state, pos, damage, range, dir, spread, duration, kill_list, damage_list):
-        super().__init__(group, game_state, pos, damage, duration)
+        super().__init__(group, game_state, pos, damage, duration, [pg.Surface((1, 1))])
         # melee attack has no image, the player changes to a slashing animation instead
         self.image = pg.Surface((1, 1), pg.SRCALPHA)
         # filled image with a transparent color
@@ -93,9 +104,11 @@ class MeleeAttack(DamageSource):
                     entity.on_damage(self)
 
     def on_damage(self, entity):
-        # TODO: add red tint for this but only on image
-        """Changes entity to a white color when it takes damage"""
-        entity.image.fill((255, 255, 255))
+        self.damage_flash(entity, MeleeAttack.DAMAGE_FLASH_COLOR)
+
+    def damaging(self, entity):
+        if entity.frame_counter - entity.damage_frame <= MeleeAttack.DAMAGE_FLASH_TIME:
+            self.damage_flash(entity, MeleeAttack.DAMAGE_FLASH_COLOR)
 
 
 class Projectile(DamageSource):
@@ -121,10 +134,11 @@ class Projectile(DamageSource):
         # movement update
         self.pos += self.vel
         self.rect.center = self.pos.x, self.pos.y
+        self.hit_box.center = self.pos.x, self.pos.y
         self.frame_counter += 1
         self.animate()
         # collision with other sprites
-        for sprite in pg.sprite.spritecollide(self, self.game_state.all_sprites, False):
+        for sprite in pg.sprite.spritecollide(self, self.game_state.all_sprites, False, collided=Entity.collided):
             self.collision_behavior(sprite)
         # out of screen bounds then deleted
         if not (0 < self.pos.x < self.game_state.game.window_size[0] and 0 < self.pos.y <
@@ -146,36 +160,42 @@ class Projectile(DamageSource):
 
 class Fireball(Projectile):
     """Fireball class"""
-    BURN = 120  # time duration of fire damage burning
-    ANIMATION_SPEED = 4
+    BURN = 180  # time duration of fire damage burning
+    BURN_DAMAGE = 2
+    BURN_TIME = 30  # time duration of burning effect
+    BURN_COLOR = (240, 60, 34)
+    BURN_MAX_ALPHA = 200
+    DAMAGE_FLASH_TIME = 4  # time duration of white flash when damaged
+    DAMAGE_FLASH_COLOR = (255, 255, 255)
+    ANIMATION_SPEED = 4  # speed of the fireball cycle animation
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
         super().__init__(group, game_state, pos, vel, damage, Fireball.BURN, kill_list, damage_list,
-                         [pg.transform.scale(image, (48, 48)) for image in
-                          [pg.image.load("assets/fireball/tile{0}.png".format(x)) for x in
-                           ["000",
-                            "001",
-                            "002",
-                            "003"
+                         [pg.transform.scale(image, (64, 64)) for image in
+                          [pg.image.load("assets/fireball/fireball_{0}.png".format(x)) for x in
+                           ["0",
+                            "1",
+                            "2",
+                            "3"
                             ]]])
         self.hit_box.size = 16, 16
+        self.burn_counter = 0
 
     def on_damage(self, entity):
-        # TODO make this look better with pixel art
-        on_damage_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        on_damage_image.blit(entity.image, (0, 0))
-        on_damage_image.fill((255, 255, 255, 200)) # flashes sprite white when projectile hits it
-        entity.image = on_damage_image
+        self.damage_flash(entity, Fireball.DAMAGE_FLASH_COLOR)
 
     def damaging(self, entity):
-        # TODO: make the enemy light on fire
-        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        damaging_image.blit(entity.image, (0, 0))
-        damaging_image.fill((255, 0, 0, 200))  # flashes sprite white when projectile hits it
-        entity.image = damaging_image
-        if entity.frame_counter % 60 == 0:
-            # burns enemy for damage over time
-            entity.health -= 2
+        if entity.frame_counter - entity.damage_frame <= Fireball.DAMAGE_FLASH_TIME:
+            self.damage_flash(entity, Fireball.DAMAGE_FLASH_COLOR)
+        else:
+            self.burn_counter += 1
+            if self.burn_counter % 60 == 0:
+                self.burn_counter = 0
+                entity.health -= Fireball.BURN_DAMAGE
+            elif self.burn_counter < Fireball.DAMAGE_FLASH_TIME:
+                self.damage_flash(entity, Fireball.DAMAGE_FLASH_COLOR)
+            elif Fireball.DAMAGE_FLASH_TIME <= self.burn_counter < Fireball.BURN_TIME:
+                self.burn_flash(entity, Fireball.BURN_COLOR)
 
     def animate(self):
         # TODO: remove hardcoded moduli and offsets and make this inherited from enemy class
@@ -183,64 +203,86 @@ class Fireball(Projectile):
         self.switch_image(self.images[(self.frame_counter // Fireball.ANIMATION_SPEED) % 4])
         self.image = pg.transform.rotate(self.image, -self.angle * 180 / math.pi + 90)
 
-    def switch_image(self, image):
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
+    def burn_flash(self, entity, burn_color):
+        """Burns enemy fading red to indicate burn as opposed to initial hit of fireball"""
+        entity_mask = pg.mask.from_surface(entity.image)
+        damage_mask = entity_mask.to_surface(setcolor=burn_color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(Fireball.BURN_MAX_ALPHA * (1 - self.burn_counter / Fireball.BURN_TIME))
+        entity.image = entity.image.copy()
+        entity.image.blit(damage_mask, (0, 0))
 
 
 class Root(Projectile):
     """Root class"""
-    DURATION = 180  # duration that enemy is rooted into place
+    ROOT_COLOR = (255, 255, 200)
+    ROOT_ALPHA = 100
+    DAMAGE_FLASH_TIME = 4  # time duration of white flash when damaged
+    DAMAGE_FLASH_COLOR = (255, 255, 255)
+    ANIMATION_SPEED = 4  # speed of the root cycle animation
+    DURATION = 180
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
-        super().__init__(group, game_state, pos, vel, damage, Root.DURATION, kill_list, damage_list)
+        super().__init__(group, game_state, pos, vel, damage, Root.DURATION, kill_list, damage_list, [pg.Surface((32, 32))])
         # TODO: add animations for root
         self.image.fill((255, 255, 255))
 
-    # TODO: add animations for root effect
     def on_damage(self, entity):
-        # TODO make this look better with pixel art
-        flashing_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        flashing_image.blit(entity.image, (0, 0))
-        flashing_image.fill((255, 255, 255, 200))  # flashes sprite white when projectile hits it
-        entity.image = flashing_image
+        self.damage_flash(entity, Root.DAMAGE_FLASH_COLOR)
 
     def damaging(self, entity):
-        # TODO: make the enemy caged in a root animation
-        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        damaging_image.blit(entity.image, (0, 0))
-        damaging_image.fill((255, 255, 0, 40))  # flashes sprite white when projectile hits it
-        entity.image = damaging_image
-        # all entity movement is stopped when rooted.
+        if entity.frame_counter - entity.damage_frame <= Root.DAMAGE_FLASH_TIME:
+            self.damage_flash(entity, Root.DAMAGE_FLASH_COLOR)
+        else:
+            self.root_flash(entity, Root.ROOT_COLOR)
+
         entity.vel = Vector2(0, 0)
         entity.dir = Vector2(0, 0)
+
+    def root_flash(self, entity, root_color):
+        """roots enemy yellow"""
+        entity_mask = pg.mask.from_surface(entity.image)
+        damage_mask = entity_mask.to_surface(setcolor=root_color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(Root.ROOT_ALPHA)
+        entity.image = entity.image.copy()
+        entity.image.blit(damage_mask, (0, 0))
+
 
 
 class Hook(Projectile):
     """Root class"""
+    HOOK_COLOR = (200, 255, 200)
+    ROOT_ALPHA = 100
+    DAMAGE_FLASH_TIME = 4  # time duration of white flash when damaged
+    DAMAGE_FLASH_COLOR = (200, 255, 200)
+    ANIMATION_SPEED = 4  # speed of the hook cycle animation
     DURATION = 5  # duration that hooks pulls entity
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
-        super().__init__(group, game_state, pos, vel, damage, Hook.DURATION, kill_list, damage_list)
+        super().__init__(group, game_state, pos, vel, damage, Hook.DURATION, kill_list, damage_list, [pg.Surface((32, 32))])
         # TODO: make an image of a rotate
         self.image.fill((0, 255, 0))
 
     def on_damage(self, entity):
-        # TODO make this look better with pixel art
-        flashing_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        flashing_image.blit(entity.image, (0, 0))
-        flashing_image.fill((255, 255, 255, 200))  # flashes sprite white when projectile hits it
-        entity.image = flashing_image
+        self.damage_flash(entity, Hook.DAMAGE_FLASH_COLOR)
 
     def damaging(self, entity):
-        # TODO: change animation mode of the sprite to be flailing
-        damaging_image = pg.Surface(entity.image.get_size(), pg.SRCALPHA)
-        damaging_image.blit(entity.image, (0, 0))
-        damaging_image.fill((0, 255, 0, 200))  # flashes sprite white when projectile hits it
-        entity.image = damaging_image
+        if entity.frame_counter - entity.damage_frame <= Hook.DAMAGE_FLASH_TIME:
+            self.damage_flash(entity, Hook.DAMAGE_FLASH_COLOR)
+        else:
+            self.hook_flash(entity, Hook.HOOK_COLOR)
         # moves towards the hook source for 6 seconds
-        entity.dir = -6 * self.vel.normalize()
+        entity.dir = -12 * self.vel.normalize()
+
+    def hook_flash(self, entity, color):
+        """hooks enemy and makes green"""
+        entity_mask = pg.mask.from_surface(entity.image)
+        damage_mask = entity_mask.to_surface(setcolor=color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(Hook.ROOT_ALPHA)
+        entity.image = entity.image.copy()
+        entity.image.blit(damage_mask, (0, 0))
 
 
 class Ability:
@@ -276,7 +318,7 @@ class ShootFireball(Ability):
     SPRAY_ANGLE = 0.1  # angle in radians of spread when shooting
     FIRE_BALL_SPEED = 8.15  # speed of shooting fireballs
     COOL_DOWN = 32  # ability cool down
-    DAMAGE = 10  # frieball damage
+    DAMAGE = 10  # fireball damage
 
     def __init__(self, sprite, kill_list, damage_list):
         super().__init__(sprite, ShootFireball.COOL_DOWN, kill_list, damage_list)
@@ -312,7 +354,7 @@ class ShootFireball(Ability):
 class ShootRoot(Ability):
     MAX_ROOTS = 3
     ROOT_SPEED = 3
-    COOL_DOWN = 180
+    COOL_DOWN = 240
     DAMAGE = 0
 
     def __init__(self, sprite, kill_list, damage_list):

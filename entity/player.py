@@ -22,7 +22,29 @@ class Player(AbilityEntity):
         super().__init__(group=group,
                          game_state=game_state,
                          pos=Vector2(200, 200),
-                         images=[pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in [pg.image.load("assets/player/tile{0}.png".format(x)) for x in ["000", "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "024", "025", "026"]]],
+                         images=
+                         [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                          [pg.image.load("assets/player/player_{0}.png".format(x)) for x in
+                           ["0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                            "6",
+                            "7",
+                            "8",
+                            "9",
+                            "10",
+                            "11",
+                            "12",
+                            "13",
+                            "14",
+                            "15",
+                            "24",
+                            "25",
+                            "26"
+                            ]]],
                          health=100)
         # hit box for walls only, allows the "head" of the player to be drawn above walls
         self.wall_hit_box = pg.Rect(self.hit_box.x, self.hit_box.y + self.hit_box.height / 2,
@@ -144,11 +166,6 @@ class Player(AbilityEntity):
                 self.switch_image(self.images[(self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6])
             elif not self.facing_right:  # storing animation
                 self.switch_image(pg.transform.flip(self.images[((self.frame_counter // Player.ANIMATION_SPEED["standing"]) % 6)], True, False))
-
-    def switch_image(self, image):
-        self.image = image
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
 
     def check_screen_bounds(self):
         """manages behavior if player collides with edge of screen"""

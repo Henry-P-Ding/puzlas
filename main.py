@@ -44,5 +44,5 @@ class Game:
 
 
 pg.init()
-game = Game((704, 512), 60)
+game = Game((832, 640), 60)
 game.start()
