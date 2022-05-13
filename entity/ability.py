@@ -172,7 +172,7 @@ class Fireball(Projectile):
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
         super().__init__(group, game_state, pos, vel, damage, Fireball.BURN, kill_list, damage_list,
                          [pg.transform.scale(image, (64, 64)) for image in
-                          [pg.image.load("assets/fireball/fireball_{0}.png".format(x)) for x in
+                          [pg.image.load("assets/ability/fireball/fireball_{0}.png".format(x)) for x in
                            ["0",
                             "1",
                             "2",

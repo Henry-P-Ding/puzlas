@@ -94,8 +94,6 @@ class Player(AbilityEntity):
         self.pos += self.vel
 
         self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 4
-
-        # wall collision check with player hit box specifically
         if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Player.wall_collided) is not None:
             while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Player.wall_collided) is not None:
                 self.pos -= self.dir

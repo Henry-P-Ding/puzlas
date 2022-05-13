@@ -147,6 +147,7 @@ class PlayingState(GameState):
         # game background
         background_image = pg.image.load("assets/map/map.png")
         self.background = pg.transform.scale(background_image, (background_image.get_width() * 4, background_image.get_height() * 4))
+        self.on_camera_background = pg.Surface([self.shake_screen.get_width(), self.shake_screen.get_height()])
         # level creator
         self.level_creator = LevelCreator(self, Vector2(0, 0))
         # sets all_sprites group to draw by order of y_position
@@ -168,8 +169,16 @@ class PlayingState(GameState):
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
     def load(self):
-        self.shake_screen.blit(self.background, (0, 0))
-        pg.display.update()
+        self.on_camera_background.blit(self.background, (0, 0),
+                                  (int(self.level_creator.stage.x * self.tile_dim[0]) * self.tile_size,
+                                   int(self.level_creator.stage.y * self.tile_dim[1]) * self.tile_size,
+                                   int(self.level_creator.stage.x + 1) * self.tile_dim[0] * self.tile_size,
+                                   int(self.level_creator.stage.y + 1) * self.tile_dim[1] * self.tile_size))
+        self.shake_screen.fill((0, 0, 0))
+        self.shake_screen.blit(self.on_camera_background, (0, 0))
+        self.game.screen.fill((0, 0, 0))
+        rect = self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
+        pg.display.update(rect)
 
     def update(self):
         """Updates all game objects based on input."""
@@ -182,6 +191,8 @@ class PlayingState(GameState):
         screen_bound = self.player.check_screen_bounds()
         if screen_bound is not None:
             self.level_creator.stage += screen_bound
+            print(self.level_creator.stage)
+            print(self.tile_dim)
             # remove all non-player objects to switch stage
             for sprite in self.all_sprites:
                 if not isinstance(sprite, Player):
@@ -193,6 +204,17 @@ class PlayingState(GameState):
                 self.player.pos.x = screen_bound.x % self.game.window_size[0]
             elif screen_bound.y != 0:
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
+            # draws new background
+            self.on_camera_background.fill((0, 0, 0))
+            self.on_camera_background.blit(self.background, (0, 0),
+                                      (int(self.level_creator.stage.x * self.tile_dim[0]) * self.tile_size,
+                                       int(self.level_creator.stage.y * self.tile_dim[1]) * self.tile_size,
+                                       int(self.level_creator.stage.x + 1) * self.tile_dim[0] * self.tile_size,
+                                       int(self.level_creator.stage.y + 1) * self.tile_dim[1] * self.tile_size))
+            self.shake_screen.blit(self.on_camera_background, (0, 0))
+            self.game.screen.fill((0, 0, 0))
+            rect = self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
+            pg.display.update(rect)
 
         # reset camera shake
         if self.shake_timer != 0:
@@ -204,11 +226,11 @@ class PlayingState(GameState):
     def render(self):
         """Renders all game objects."""
         # clears sprites from the screen
-        self.all_sprites.clear(self.shake_screen, self.background)
+        self.all_sprites.clear(self.shake_screen, self.on_camera_background)
         # pygame rectangles for all sprites to be updated on the game screen
         dirty_rects = self.all_sprites.draw(self.shake_screen)
         # gui updates
-        self.gui_sprites.clear(self.shake_screen, self.background)
+        self.gui_sprites.clear(self.shake_screen, self.on_camera_background)
         dirty_rects += self.gui_sprites.draw(self.shake_screen)
         # updates only areas of the screen that have changed
         offset_dirty_rects = []

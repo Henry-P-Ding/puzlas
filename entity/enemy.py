@@ -227,7 +227,7 @@ class FireMage(Pathfinder):
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
         super().__init__(group, game_state, pos, ShootFireball(self, attack_list, attack_list), speed, health,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
-                          [pg.image.load("assets/fire_mage/fire_mage_{0}.png".format(x)) for x in
+                          [pg.image.load("assets/enemy/fire_mage/fire_mage_{0}.png".format(x)) for x in
                            ["0",
                             "1",
                             "2",
@@ -322,7 +322,7 @@ class RootMage(Pathfinder):
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
         super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
-                          [pg.image.load("assets/root_mage/root_mage_{0}.png".format(x)) for x in
+                          [pg.image.load("assets/enemy/root_mage/root_mage_{0}.png".format(x)) for x in
                            ["0",
                             "1",
                             "2",
@@ -416,7 +416,7 @@ class HookMage(Pathfinder):
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
         super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
-                          [pg.image.load("assets/hook_mage/hook_mage_{0}.png".format(x)) for x in
+                          [pg.image.load("assets/enemy/hook_mage/hook_mage_{0}.png".format(x)) for x in
                            ["0",
                             "1",
                             "2",
