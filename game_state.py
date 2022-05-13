@@ -145,7 +145,8 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        self.background.fill((86, 125, 70))
+        background_image = pg.image.load("assets/map/map.png")
+        self.background = pg.transform.scale(background_image, (background_image.get_width() * 4, background_image.get_height() * 4))
         # level creator
         self.level_creator = LevelCreator(self, Vector2(0, 0))
         # sets all_sprites group to draw by order of y_position
@@ -228,7 +229,7 @@ class SelectionMenu(GameState):
     def __init__(self, game, name):
         super().__init__(game, name)
         # game background
-        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
+        self.background = pg.image.load("assets/map/map.png")
         self.background.fill((0, 0, 0))
         # sprites
         self.selector = None
