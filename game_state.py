@@ -152,6 +152,8 @@ class PlayingState(GameState):
         self.level_creator = LevelCreator(self, Vector2(0, 0))
         # sets all_sprites group to draw by order of y_position
         self.all_sprites = VerticalOrderSprites()
+        # map ornaments
+        self.map_ornaments = pg.sprite.Group()
         # player
         self.player = Player(self.all_sprites, self)
         # player sprite group
