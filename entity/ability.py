@@ -191,7 +191,8 @@ class Fireball(Projectile):
             self.burn_counter += 1
             if self.burn_counter % 60 == 0:
                 self.burn_counter = 0
-                entity.health -= Fireball.BURN_DAMAGE
+                if hasattr(entity, "take_damage"):
+                    entity.take_damage(Fireball.BURN_DAMAGE)
             elif self.burn_counter < Fireball.DAMAGE_FLASH_TIME:
                 self.damage_flash(entity, Fireball.DAMAGE_FLASH_COLOR)
             elif Fireball.DAMAGE_FLASH_TIME <= self.burn_counter < Fireball.BURN_TIME:

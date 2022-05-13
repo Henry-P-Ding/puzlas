@@ -77,10 +77,14 @@ class GameState:
         self.name = name
         # all sprites associated with this game state
         self.all_sprites = pg.sprite.RenderUpdates()
+        # gui sprites
+        self.gui_sprites = pg.sprite.RenderUpdates()
         # controls associated with this game state
         self.controls = None
         # mouse position
         self.mouse_pos = pg.mouse.get_pos()
+        # background of the game
+        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
 
     def load(self):
         """Behavior when this game state is loaded from pool."""
@@ -89,8 +93,8 @@ class GameState:
     def loop(self):
         """Game state loop, runs input(), update(), and render() steps"""
         self.render()
-        self.input()
         self.update()
+        self.input()
         self.game.time_delta = self.game.clock.tick(self.game.fps)
 
     def input(self):
@@ -114,9 +118,12 @@ class GameState:
         # clears sprites from the screen
         self.all_sprites.clear(self.game.screen, self.background)
         # pygame rectangles for all sprites to be updated on the game screen
-        sprite_rects = self.all_sprites.draw(self.game.screen)
+        dirty_rects = self.all_sprites.draw(self.game.screen)
+        # gui updates
+        self.gui_sprites.clear(self.game.screen, self.background)
+        dirty_rects += self.gui_sprites.draw(self.game.screen)
         # updates only areas of the screen that have changed
-        pg.display.update(sprite_rects)
+        pg.display.update(dirty_rects)
 
     def exit(self):
         """Behavior when game state is exited and game switches to a new state."""
@@ -129,18 +136,20 @@ class PlayingState(GameState):
     """
     def __init__(self, game, name):
         super().__init__(game, name)
+        # pre-shake screen surface for camera shake
+        self.shake_screen = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
+        self.camera_pos = Vector2(0, 0)
+        self.pre_shake_pos = self.camera_pos.copy()
+        self.shake_timer = 0
         # tile dimensions
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
         self.background.fill((86, 125, 70))
         # level creator
         self.level_creator = LevelCreator(self, Vector2(0, 0))
         # sets all_sprites group to draw by order of y_position
         self.all_sprites = VerticalOrderSprites()
-        # gui sprites
-        self.gui_sprites = pg.sprite.RenderUpdates()
         # player
         self.player = Player(self.all_sprites, self)
         # player sprite group
@@ -158,7 +167,7 @@ class PlayingState(GameState):
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
     def load(self):
-        self.game.screen.blit(self.background, (0, 0))
+        self.shake_screen.blit(self.background, (0, 0))
         pg.display.update()
 
     def update(self):
@@ -184,22 +193,38 @@ class PlayingState(GameState):
             elif screen_bound.y != 0:
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
 
+        # reset camera shake
+        if self.shake_timer != 0:
+            self.camera_pos += Vector2(random.randint(-10, 10), random.randint(-10, 10))
+            self.shake_timer -= 1
+        else:
+            self.camera_pos = self.pre_shake_pos
+
     def render(self):
-        # TODO: add gui group to generic game state so this isn't needed to be overwritten
         """Renders all game objects."""
         # clears sprites from the screen
-        self.all_sprites.clear(self.game.screen, self.background)
+        self.all_sprites.clear(self.shake_screen, self.background)
         # pygame rectangles for all sprites to be updated on the game screen
-        sprite_rects = self.all_sprites.draw(self.game.screen)
+        dirty_rects = self.all_sprites.draw(self.shake_screen)
         # gui updates
-        self.gui_sprites.clear(self.game.screen, self.background)
-        gui_rects = self.gui_sprites.draw(self.game.screen)
+        self.gui_sprites.clear(self.shake_screen, self.background)
+        dirty_rects += self.gui_sprites.draw(self.shake_screen)
         # updates only areas of the screen that have changed
-        pg.display.update(sprite_rects + gui_rects)
+        offset_dirty_rects = []
+        for rect in dirty_rects:
+            offset_dirty_rects.append(rect.move(-self.camera_pos.x, -self.camera_pos.y))
+        # resets game screen
+        self.game.screen.fill((0, 0, 0))
+        self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
+        pg.display.update(dirty_rects + offset_dirty_rects)
+
+    def shake_camera(self, time):
+        if self.shake_timer == 0:
+            self.pre_shake_pos = self.camera_pos.copy()
+        self.shake_timer = time
 
 
 class SelectionMenu(GameState):
-
     def __init__(self, game, name):
         super().__init__(game, name)
         # game background
@@ -256,6 +281,7 @@ class StartMenu(SelectionMenu):
         self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
         self.selection = 0
 
+
 # TODO: change this to using GUI sprites
 class PauseMenu(SelectionMenu):
     # intensity of black tint on screen during pause menu
@@ -289,16 +315,6 @@ class PauseMenu(SelectionMenu):
         self.selector = Selector(self.all_sprites, self.buttons[0].pos + Vector2(130, 0), Vector2(130, 0))
         # reset selection to 0
         self.selection = 0
-
-    def render(self):
-        """Renders pause button and overlay."""
-
-        # clears sprites from the screen
-        self.all_sprites.clear(self.game.screen, self.background)
-        # pygame rectangles for all sprites to be updated on the game screen
-        sprite_rects = self.all_sprites.draw(self.game.screen)
-        # updates only areas of the screen that have changed
-        pg.display.update(sprite_rects)
 
     def activate_selection(self):
         """Activates selected button's defined function."""

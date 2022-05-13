@@ -185,11 +185,18 @@ class Player(AbilityEntity):
 
     def on_damage(self, source):
         """Behavior when enemy takes damage."""
+        # update player damage status
         self.damaged = True
         self.damage_frame = self.frame_counter
         self.damage_source = source
-        self.health -= self.damage_source.damage
+        self.take_damage(source.damage)
         self.damage_source.on_damage(self)
+        self.game_state.shake_camera(15)
+
+    def take_damage(self, damage_amount):
+        self.health -= damage_amount
+        #TODO: remove hardcoded
+        self.game_state.shake_camera(15)
 
     def death_behavior(self):
         print('game lost')
