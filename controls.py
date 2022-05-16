@@ -89,3 +89,13 @@ class PauseMenuControls(Controls):
         self.event_maps["key_up"] = {
             pg.K_ESCAPE: lambda: self.game.game_state_manager.exit_state()
         }
+
+
+class GameOverMenuControls(Controls):
+    def __init__(self, game):
+        super().__init__(game)
+        self.event_maps["key_down"] = {
+            pg.K_RETURN: lambda: self.game.game_state_manager.current_state().activate_selection(),
+            pg.K_DOWN: lambda: self.game.game_state_manager.current_state().update_selection(1),
+            pg.K_UP: lambda: self.game.game_state_manager.current_state().update_selection(-1)
+        }

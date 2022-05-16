@@ -23,7 +23,8 @@ class LevelCreator:
             "R": self.place_root_mage,
             "H": self.place_hook_mage,
             "A": self.place_fountain,
-            "B": self.place_fountain
+            "B": self.place_fountain,
+            "S": self.place_spike
         }
 
     def create_level(self, level_data):
@@ -49,14 +50,14 @@ class LevelCreator:
     @staticmethod
     def load_from_string(level_string):
         """Creates 2D array of characters from single string with newlines."""
-        return level_string.split("\n")
+        return [list(row) for row in level_string.split("\n")]
 
     def place_wall(self, tile_x, tile_y):
         """Places a wall object at tile location."""
         self.game_state.walls.add(Wall(group=self.game_state.all_sprites,
                                        game_state=self.game_state,
                                        pos=Vector2(tile_x * self.game_state.tile_size, tile_y * self.game_state.tile_size)))
-        
+
     def place_fountain(self, tile_x, tile_y):
         tile = self.level[int(self.stage.y) * self.game_state.tile_dim[1] + tile_y][int(self.stage.x) * self.game_state.tile_dim[0] + tile_x]
         fountain = Fountain(group=self.game_state.all_sprites,
@@ -66,10 +67,20 @@ class LevelCreator:
         self.game_state.map_ornaments.add(fountain)
         self.game_state.walls.add(fountain)
 
+    def place_spike(self, tile_x, tile_y):
+        spike = Spike(group=self.game_state.all_sprites,
+                      game_state=self.game_state,
+                      pos=Vector2(tile_x * self.game_state.tile_size, tile_y * self.game_state.tile_size),
+                      damage=Spike.DAMAGE,
+                      damage_list=[self.game_state.enemies, self.game_state.player_group])
+        self.game_state.map_ornaments.add(spike)
+
     def place_player(self, tile_x, tile_y):
         """Places player object at tile location."""
         self.game_state.player.pos = Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size,
                                              (2 * tile_y + 1) / 2 * self.game_state.tile_size)
+        # removes player character after being placed
+        self.level[int(self.stage.y) * self.game_state.tile_dim[1] + tile_y][int(self.stage.x) * self.game_state.tile_dim[0] + tile_x] = " "
 
     def place_melee(self, tile_x, tile_y):
         """Places melee enemy at tile location."""
@@ -107,7 +118,5 @@ class LevelCreator:
                                              pos=Vector2((2 * tile_x + 1) / 2 * self.game_state.tile_size, (2 * tile_y + 1) / 2 * self.game_state.tile_size),
                                              speed=3,
                                              health=50,
-                                             range=200,
+                                             range=400,
                                              attack_list=[self.game_state.walls, self.game_state.player_group]))
-
-

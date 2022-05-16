@@ -1,38 +1,10 @@
 import pygame as pg
 from pygame.math import *
 from entity.game_entity import Entity
+from entity.game_entity import DamageSource
 import random
 import math
-
-
-class DamageSource(Entity):
-    """Base class for all game entities that do damage."""
-
-    def __init__(self, group, game_state, pos, damage, duration, images):
-        super().__init__(group, game_state, pos, images)
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
-        # numerical damage value
-        self.damage = damage
-        # duration that other entities are considered in damage state
-        self.damage_duration = duration
-
-    def on_damage(self, entity):
-        """Behavior when sprite first takes damage fromm source"""
-        pass
-
-    def damaging(self, entity):
-        """Loop behavior when sprite is taking damage from this source"""
-        pass
-
-    def damage_flash(self, entity, color):
-        """Flashes the entity white to indicate damage"""
-        entity_mask = pg.mask.from_surface(entity.image)
-        damage_mask = entity_mask.to_surface(setcolor=color)
-        damage_mask.set_colorkey((0, 0, 0))
-        damage_mask.set_alpha(200)
-        entity.image = entity.image.copy()
-        entity.image.blit(damage_mask, (0, 0))
+from entity.particle import *
 
 
 class MeleeAttack(DamageSource):
@@ -63,7 +35,7 @@ class MeleeAttack(DamageSource):
         return False
 
     def __init__(self, group, game_state, pos, damage, range, dir, spread, duration, kill_list, damage_list):
-        super().__init__(group, game_state, pos, damage, duration, [pg.Surface((1, 1))])
+        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, [pg.Surface((1, 1))])
         # melee attack has no image, the player changes to a slashing animation instead
         self.image = pg.Surface((1, 1), pg.SRCALPHA)
         # filled image with a transparent color
@@ -77,11 +49,6 @@ class MeleeAttack(DamageSource):
             angle = math.atan(dir.y / dir.x) if dir.x > 0 else math.atan(dir.y / dir.x) + math.pi
         # min and max angle considered within the angle boundaries based off of the attack angle
         self.angle_min, self.angle_max = angle - spread, angle + spread
-
-        # list of sprites groups that will kill this MeleeAttack object
-        self.kill_list = kill_list
-        # list of sprite groups this ability will damage to
-        self.damage_list = damage_list
 
     def update(self):
         self.frame_counter += 1
@@ -117,7 +84,7 @@ class Projectile(DamageSource):
     """
 
     def __init__(self, group, game_state, pos, vel, damage, duration, kill_list, damage_list, images):
-        super().__init__(group, game_state, pos, damage, duration, images)
+        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, images)
         # movement speed
         self.vel = vel
         # image of projectile
@@ -125,9 +92,6 @@ class Projectile(DamageSource):
             self.angle = math.pi / 2 if vel.y > 0 else -math.pi / 2
         else:
             self.angle = math.atan(vel.y / vel.x) if vel.x > 0 else math.atan(vel.y / vel.x) + math.pi
-        # pygame rectangle of projectile hit box
-        self.kill_list = kill_list
-        self.damage_list = damage_list
 
     def update(self):
         """Update behavior of projectile"""
@@ -168,6 +132,8 @@ class Fireball(Projectile):
     DAMAGE_FLASH_TIME = 4  # time duration of white flash when damaged
     DAMAGE_FLASH_COLOR = (255, 255, 255)
     ANIMATION_SPEED = 4  # speed of the fireball cycle animation
+    ANIMATION_MODULUS = 4
+    PARTICLE_TRAIL_RATE = 4  # rate of generating particles in particle trail
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
         super().__init__(group, game_state, pos, vel, damage, Fireball.BURN, kill_list, damage_list,
@@ -199,10 +165,14 @@ class Fireball(Projectile):
                 self.burn_flash(entity, Fireball.BURN_COLOR)
 
     def animate(self):
-        # TODO: remove hardcoded moduli and offsets and make this inherited from enemy class
-        """Animates player sprite."""
-        self.switch_image(self.images[(self.frame_counter // Fireball.ANIMATION_SPEED) % 4])
+        """Animates fireball sprite."""
+        self.switch_image(self.images[(self.frame_counter // Fireball.ANIMATION_SPEED) % Fireball.ANIMATION_MODULUS])
         self.image = pg.transform.rotate(self.image, -self.angle * 180 / math.pi + 90)
+        if self.frame_counter % Fireball.PARTICLE_TRAIL_RATE == 0:
+            trail_pos = self.pos + Vector2(random.random() * 2 * self.hit_box.width / 2 - self.hit_box.width / 2,
+                                           random.random() * 2 * self.hit_box.height / 2 - self.hit_box.height / 2)
+            self.game_state.particles.add(FireTrail(self.game_state.all_sprites, self.game_state, trail_pos))
+            
 
     def burn_flash(self, entity, burn_color):
         """Burns enemy fading red to indicate burn as opposed to initial hit of fireball"""
@@ -250,7 +220,6 @@ class Root(Projectile):
         entity.image.blit(damage_mask, (0, 0))
 
 
-
 class Hook(Projectile):
     """Root class"""
     HOOK_COLOR = (200, 255, 200)
@@ -259,11 +228,14 @@ class Hook(Projectile):
     DAMAGE_FLASH_COLOR = (200, 255, 200)
     ANIMATION_SPEED = 4  # speed of the hook cycle animation
     DURATION = 5  # duration that hooks pulls entity
+    ROTATION_SPEED = 0.7  # radians per frame that image rotates
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
-        super().__init__(group, game_state, pos, vel, damage, Hook.DURATION, kill_list, damage_list, [pg.Surface((32, 32))])
-        # TODO: make an image of a rotate
-        self.image.fill((0, 255, 0))
+        super().__init__(group, game_state, pos, vel, damage, Hook.DURATION, kill_list, damage_list, 
+                         [pg.transform.scale(image, (36, 84)) for image in
+                          [pg.image.load("assets/ability/hook/weapon_axe.png")]])
+        self.hit_box.size = 16, 16
+        self.rotation_speed = Hook.ROTATION_SPEED
 
     def on_damage(self, entity):
         self.damage_flash(entity, Hook.DAMAGE_FLASH_COLOR)
@@ -275,6 +247,13 @@ class Hook(Projectile):
             self.hook_flash(entity, Hook.HOOK_COLOR)
         # moves towards the hook source for 6 seconds
         entity.dir = -12 * self.vel.normalize()
+
+    def animate(self):
+        self.angle += self.rotation_speed
+        del self.image
+        self.image = pg.transform.rotate(self.images[0], self.angle * 180 / math.pi)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos.x, self.pos.y
 
     def hook_flash(self, entity, color):
         """hooks enemy and makes green"""
@@ -318,7 +297,7 @@ class ShootFireball(Ability):
     MAX_FIREBALLS = 30  # maximum number of fireballs on the screen at once
     SPRAY_ANGLE = 0.1  # angle in radians of spread when shooting
     FIRE_BALL_SPEED = 8.15  # speed of shooting fireballs
-    COOL_DOWN = 32  # ability cool down
+    COOL_DOWN = 12  # ability cool down
     DAMAGE = 10  # fireball damage
 
     def __init__(self, sprite, kill_list, damage_list):
@@ -386,9 +365,9 @@ class ShootRoot(Ability):
 
 class ShootHook(Ability):
     MAX_HOOKS = 1
-    HOOK_SPEED = 15
-    COOL_DOWN = 180
-    DAMAGE = 0
+    HOOK_SPEED = 10
+    COOL_DOWN = 90
+    DAMAGE = 25
 
     # TODO: create global settings for hook ability
     def __init__(self, sprite, kill_list, damage_list):
@@ -409,7 +388,7 @@ class ShootHook(Ability):
                                game_state=self.sprite.game_state,
                                pos=Vector2(self.sprite.pos.x, self.sprite.pos.y),
                                vel=ShootHook.HOOK_SPEED * dir,
-                               damage=ShootRoot.DAMAGE,
+                               damage=ShootHook.DAMAGE,
                                kill_list=self.kill_list,
                                damage_list=self.damage_list))
 

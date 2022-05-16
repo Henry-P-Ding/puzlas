@@ -208,10 +208,11 @@ class FireMage(Pathfinder):
     """
     Fire mage enemy class that can attack the player at range with a fireball ability.
     """
+    ABILITY_COOLDOWN = 32
     ANIMATION_SPEED = {
         "standing": 20,
         "moving": 4,
-        "firing": int(ShootFireball.COOL_DOWN / 4)
+        "firing": int(ABILITY_COOLDOWN / 4)
     }
     ANIMATION_MODULI = {
         "standing": 4,
@@ -237,6 +238,8 @@ class FireMage(Pathfinder):
                             "6",
                             "7"
                             ]]])
+        # make enemy less OP
+        self.ability.cooldown = FireMage.ABILITY_COOLDOWN
         self.range = range
         self.facing_right = False
         self.firing = False
@@ -270,7 +273,8 @@ class FireMage(Pathfinder):
 
     def attack(self):
         """Attacks player within a certain range."""
-        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+
+        if not self.game_state.player.dead and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
             self.firing = True
 

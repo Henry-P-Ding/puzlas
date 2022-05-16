@@ -3,6 +3,7 @@ from pygame.math import *
 from entity.game_entity import AbilityEntity
 from entity.game_entity import Entity
 from gui import *
+from entity.particle import *
 
 
 class Player(AbilityEntity):
@@ -12,6 +13,8 @@ class Player(AbilityEntity):
     # TODO: create a settings file for constants
     SPEED = 8
     DISPLAY_SIZE = (60, 80)
+    WALK_DUST_RATE = 4
+    DEATH_ANIMATION_LENGTH = 120
     ANIMATION_SPEED = {
         "standing": 12,
         "moving": 4,
@@ -41,9 +44,9 @@ class Player(AbilityEntity):
                             "13",
                             "14",
                             "15",
-                            "24",
-                            "25",
-                            "26"
+                            "16",
+                            "17",
+                            "18"
                             ]]],
                          health=100)
         # hit box for walls only, allows the "head" of the player to be drawn above walls
@@ -62,21 +65,35 @@ class Player(AbilityEntity):
 
         # player health bar
         self.max_health = 100
-        self.health_bar = IndicatorBar(group=self.game_state.gui_sprites,
-                                       pos=Vector2(16, 32),
-                                       size=Vector2(256, 32),
-                                       border_width=5,
-                                       indicator=self.health,
-                                       indicator_max=self.max_health,
-                                       bar_color=(255, 0, 0),
-                                       background_color=(255, 255, 255, 100),
-                                       border_color=(255, 255, 255))
+        self.health_bar = FractionalBar(group=self.game_state.gui_sprites,
+                                        pos=Vector2(16, 40),
+                                        size=Vector2(256, 32),
+                                        border_width=8,
+                                        indicator=self.health,
+                                        indicator_max=self.max_health,
+                                        bar_color=(255, 0, 0),
+                                        background_color=(255, 255, 255, 100),
+                                        border_color=(255, 255, 255))
+
+        # death animation counter
+        self.death_animation_counter = -1
+        self.dead = False
 
     @staticmethod
     def wall_collided(player, wall):
         return player.wall_hit_box.colliderect(wall.hit_box)
 
     def update(self):
+        # dead
+        if self.death_animation_counter > 0:
+            self.dead = True
+            self.switch_image(self.images[2 - int(self.death_animation_counter / Player.DEATH_ANIMATION_LENGTH * 2) + 16])
+            self.death_animation_counter -= 1
+            return
+        elif self.death_animation_counter == 0:
+            self.kill()
+            self.game_state.game.game_state_manager.switch_state_from_pool("game_over")
+
         self.dir = Vector2(self.game_state.controls.key_presses[pg.K_d] - self.game_state.controls.key_presses[pg.K_a],
                            self.game_state.controls.key_presses[pg.K_s] - self.game_state.controls.key_presses[pg.K_w])
 
@@ -124,6 +141,17 @@ class Player(AbilityEntity):
             self.wall_hit_box.center = self.pos.x, self.pos.y + self.hit_box.height / 4
         self.hit_box.center = self.pos.x, self.pos.y
 
+        # walking particles
+        if self.vel.magnitude_squared() != 0 and self.frame_counter % Player.WALK_DUST_RATE == 0:
+            if self.vel.y == 0:
+                dust_pos = Vector2(self.pos.x + random.randint(-self.hit_box.width / 5, self.hit_box.width / 5),
+                                   self.pos.y + (self.hit_box.height / 2 + 5) + random.randint(0, 2))
+            else:
+                dust_pos = Vector2(self.pos.x + random.randint(-self.hit_box.width / 5, self.hit_box.width / 5),
+                                   self.pos.y - self.vel.y / abs(self.vel.y) * (self.hit_box.height / 2 + 5) + random.randint(0, 2))
+
+            self.game_state.particles.add(WalkDust(self.game_state.all_sprites, self.game_state, dust_pos))
+
         # activates player ability
         if self.ability_active:
             self.ability.activate((self.game_state.mouse_pos - self.pos).normalize())
@@ -139,6 +167,9 @@ class Player(AbilityEntity):
 
         if self.health <= 0:
             self.death_behavior()
+
+        #tile_pos = Vector2(1, 1) + self.pos / self.game_state.tile_size + Vector2(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0], self.game_state.level_creator.stage.y * self.game_state.tile_dim[1])
+        #print(int(tile_pos.x), int(tile_pos.y))
 
     def animate(self):
         # TODO: remove hardcoded moduli and offsets
@@ -184,12 +215,13 @@ class Player(AbilityEntity):
     def on_damage(self, source):
         """Behavior when enemy takes damage."""
         # update player damage status
-        self.damaged = True
-        self.damage_frame = self.frame_counter
-        self.damage_source = source
-        self.take_damage(source.damage)
-        self.damage_source.on_damage(self)
-        self.game_state.shake_camera(15)
+        if not self.dead:
+            self.damaged = True
+            self.damage_frame = self.frame_counter
+            self.damage_source = source
+            self.take_damage(source.damage)
+            self.damage_source.on_damage(self)
+            self.game_state.shake_camera(15)
 
     def take_damage(self, damage_amount):
         self.health -= damage_amount
@@ -197,7 +229,6 @@ class Player(AbilityEntity):
         self.game_state.shake_camera(15)
 
     def death_behavior(self):
-        print('game lost')
-        # TODO: make a game over scree
-        self.game_state.game.stop()
+        self.dead = True
+        self.death_animation_counter = Player.DEATH_ANIMATION_LENGTH
 

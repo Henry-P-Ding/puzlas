@@ -65,3 +65,34 @@ class AbilityEntity(HealthEntity):
                                                [self.game_state.enemies])
         self.game_state.player.ability = new_ability
         self.kill()
+
+
+class DamageSource(Entity):
+    """Base class for all game entities that do damage."""
+    DAMAGE_FLASH_ALPHA = 200
+
+    def __init__(self, group, game_state, pos, damage, duration, kill_list, damage_list, images):
+        super().__init__(group, game_state, pos, images)
+        # numerical damage value
+        self.damage = damage
+        # duration that other entities are considered in damage state
+        self.damage_duration = duration
+        self.kill_list = kill_list
+        self.damage_list = damage_list
+
+    def on_damage(self, entity):
+        """Behavior when sprite first takes damage fromm source"""
+        pass
+
+    def damaging(self, entity):
+        """Loop behavior when sprite is taking damage from this source"""
+        pass
+
+    def damage_flash(self, entity, color):
+        """Flashes the entity white to indicate damage"""
+        entity_mask = pg.mask.from_surface(entity.image)
+        damage_mask = entity_mask.to_surface(setcolor=color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(DamageSource.DAMAGE_FLASH_ALPHA)
+        entity.image = entity.image.copy()
+        entity.image.blit(damage_mask, (0, 0))

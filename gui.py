@@ -51,7 +51,7 @@ class Box(pg.sprite.Sprite):
         self.rect.center = self.pos.x, self.pos.y
 
 
-class IndicatorBar(pg.sprite.Sprite):
+class FractionalBar(pg.sprite.Sprite):
     def __init__(self, group, pos, size, border_width, indicator, indicator_max, bar_color, background_color, border_color, left_centered=True):
         super().__init__(group)
         # left size of the bar
@@ -83,3 +83,27 @@ class IndicatorBar(pg.sprite.Sprite):
 
     def change_indicator(self, value):
         self.indicator = value
+
+
+class IndicatorBar(pg.sprite.Sprite):
+    def __init__(self, group, pos, size, images, left_centered=True, top_centered=True):
+        super().__init__(group)
+        # left size of the bar
+        self.pos = pos
+        self.size = size
+        self.images = []
+        for image in images:
+            self.images.append(pg.transform.scale(image, size))
+        self.image = self.images[0]
+        self.rect = self.image.get_rect()
+        if left_centered and top_centered:
+            self.rect.topleft = self.pos.x, self.pos.y
+        elif left_centered and not top_centered:
+            self.rect.bottomleft = self.pos.x, self.pos.y
+        elif not left_centered and top_centered:
+            self.rect.topright = self.pos.x, self.pos.y
+        else:
+            self.rect.bottomright = self.pos.x, self.pos.y
+
+    def change_indicator(self, index):
+        self.image = self.images[index]
