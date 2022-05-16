@@ -192,11 +192,19 @@ class Root(Projectile):
     DAMAGE_FLASH_COLOR = (255, 255, 255)
     ANIMATION_SPEED = 4  # speed of the root cycle animation
     DURATION = 180
+    ANIMATION_SPEED = 3  # speed of the fireball cycle animation
+    ANIMATION_MODULUS = 30
+    PARTICLE_TRAIL_RATE = 4  # rate of generating particles in particle trail
 
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
-        super().__init__(group, game_state, pos, vel, damage, Root.DURATION, kill_list, damage_list, [pg.Surface((32, 32))])
-        # TODO: add animations for root
-        self.image.fill((255, 255, 255))
+        super().__init__(group, game_state, pos, vel, damage, Root.DURATION, kill_list, damage_list,
+                        [pg.transform.scale(image, (100, 100)) for image in
+                        [pg.image.load("assets/ability/Root/{0}.png".format(x)) for x in range (1,31)]])
+        self.hit_box.size = 32,32
+    def animate(self):
+        """Animates fireball sprite."""
+        self.switch_image(self.images[(self.frame_counter // Root.ANIMATION_SPEED) % Root.ANIMATION_MODULUS])
+        self.image = pg.transform.rotate(self.image, -self.angle * 180 / math.pi )
 
     def on_damage(self, entity):
         self.damage_flash(entity, Root.DAMAGE_FLASH_COLOR)
@@ -335,7 +343,7 @@ class ShootRoot(Ability):
     MAX_ROOTS = 3
     ROOT_SPEED = 3
     COOL_DOWN = 240
-    DAMAGE = 0
+    DAMAGE = 34
 
     def __init__(self, sprite, kill_list, damage_list):
         super().__init__(sprite, ShootRoot.COOL_DOWN, kill_list, damage_list)
