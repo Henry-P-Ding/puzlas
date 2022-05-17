@@ -86,7 +86,7 @@ class GameState:
         # mouse position
         self.mouse_pos = pg.mouse.get_pos()
         # background of the game
-        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
+        self.background = None
 
     def load(self):
         """Behavior when this game state is loaded from pool."""
@@ -114,6 +114,8 @@ class GameState:
         """Update step in game state loop."""
         # updates game sprites
         self.all_sprites.update()
+        # update GUI sprites
+        self.gui_sprites.update()
 
     def render(self):
         """Renders all game objects."""
@@ -308,11 +310,6 @@ class SelectionMenu(GameState):
     def __init__(self, game, name):
         super().__init__(game, name)
         # game background
-        self.background = pg.image.load("assets/map/map.png")
-        self.background.fill((0, 0, 0))
-        # sprites
-        self.selector = None
-        self.selection = 0
         self.selections = None
 
     def load(self):
@@ -320,7 +317,9 @@ class SelectionMenu(GameState):
 
     def activate_selection(self):
         """Activates selected button's defined function."""
-        self.selections[self.selection].function()
+        for selection in self.selections:
+            if selection.selected:
+                selection.function()
 
     def update_selection(self, i):
         """Changes selected button based on key presses."""
@@ -335,8 +334,10 @@ class SelectionMenu(GameState):
         # resets switching frame delay
 
     def exit(self):
-        """Kills all sprites when exiting start menu, since not many sprites are present."""
         self.all_sprites.empty()
+        self.gui_sprites.empty()
+        self.selections.clear()
+        del self.background
 
 
 class StartMenu(SelectionMenu):
@@ -345,79 +346,60 @@ class StartMenu(SelectionMenu):
         super().__init__(game, name)
         # sets controls
         self.controls = controls.StartMenuControls(self.game)
+        self.title_box = None
 
     def load(self):
+        self.background = pg.Surface(self.game.window_size)
+        self.background.fill((0, 0, 0))
+        self.title_box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
+                       pg.image.load("assets/gui/menu/start_menu/start_menu_base.png"))
         self.game.screen.blit(self.background, (0, 0))
         pg.display.update(self.background.get_rect())
         self.selections = [
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
-                   "play game", lambda: self.game.game_state_manager.switch_state_from_pool("playing")),
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 200), 30, (200, 200, 200),
-                   "options", lambda: print("opening options")),
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 300), 30, (200, 200, 200),
-                   "quit", lambda: self.game.stop())
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 320), lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
+                            [pg.image.load(f"assets/gui/button/play/play_{x}.png") for x in ["0", "1"]]),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 416), lambda: print("opening options"),
+                            [pg.image.load(f"assets/gui/button/options/options_{x}.png") for x in ["0", "1"]]),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 512), lambda: self.game.stop(),
+                            [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
-        # reset selection to 0
-        self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
-        self.selection = 0
 
 
-# TODO: change this to using GUI sprites
 class PauseMenu(SelectionMenu):
     # intensity of black tint on screen during pause menu
     TINT = 150
 
     def __init__(self, game, name):
         super().__init__(game, name)
-        # set controls
-        self.controls = controls.PauseMenuControls(self.game)
-        # game background
-        self.background = pg.Surface([self.game.window_size[0], self.game.window_size[1]])
-        self.background.fill((0, 0, 0))
-        # selecting options
-        self.selector = None
         self.box = None
-        self.selections = {}
-        # selected option out of start options
-        self.selection = 0
 
     def load(self):
         """Loads controls for the pause menu, and sets overlay to false."""
-        self.box = Box(self.all_sprites, Vector2(200, 60), Vector2(520, 350), (120, 120, 120))
+        # set controls
+        self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        self.background.blit(self.game.screen, (0, 0))
+        tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        tint.fill((0, 0, 0))
+        tint.set_alpha(200)
+        self.background.blit(tint, (0, 0))
+        self.controls = controls.PauseMenuControls(self.game)
+        self.box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
+                       pg.image.load("assets/gui/menu/pause_menu/pause_menu_base.png"))
         self.selections = [
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
-                   "resume game", lambda: self.game.game_state_manager.switch_state_from_pool("playing")),
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 200), 30, (200, 200, 200),
-                   "options", lambda: print("opening options")),
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 300), 30, (200, 200, 200),
-                   "quit to menu", lambda: self.quit_to_menu())
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 220),
+                            lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
+                            [pg.image.load(f"assets/gui/button/resume_game/resume_game_{x}.png") for x in ["0", "1"]]),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 316),
+                            lambda: print("opening options"),
+                            [pg.image.load(f"assets/gui/button/options/options_{x}.png") for x in ["0", "1"]]),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 412),
+                            lambda: self.quit_to_menu(),
+                            [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
-        self.selector = Selector(self.all_sprites, self.selections[0].pos + Vector2(130, 0), Vector2(130, 0))
-        # reset selection to 0
-        self.selection = 0
-
-    def activate_selection(self):
-        """Activates selected button's defined function."""
-        self.selections[self.selection].function()
-
-    def update_selection(self, i):
-        """Changes selected button based on key presses."""
-        # switching delay
-        self.selection += i
-        # ensures selection is within bounds
-        if not 0 <= self.selection < len(self.selections):
-            self.selection -= i
-            return
-        # moves selector sprite
-        self.selector.change_selection(self.selections[self.selection].pos)
-        # resets switching frame delay
 
     def quit_to_menu(self):
         self.game.game_state_manager.exit_state()
         self.game.game_state_manager.switch_state_from_pool("start_menu")
-
-    def exit(self):
-        self.all_sprites.empty()
 
 
 class GameOverMenu(SelectionMenu):
@@ -425,34 +407,29 @@ class GameOverMenu(SelectionMenu):
     def __init__(self, game, name):
         super().__init__(game, name)
         # sets controls
-        self.controls = controls.GameOverMenuControls(self.game)
+        self.controls = None
+        self.box = None
 
     def load(self):
+        self.controls = controls.GameOverMenuControls(self.game)
+        self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        self.background.blit(self.game.screen, (0, 0))
+        tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        tint.fill((0, 0, 0))
+        tint.set_alpha(200)
+        self.background.blit(tint, (0, 0))
+        self.box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
+                       pg.transform.scale(pg.image.load(f"assets/gui/menu/game_over_menu/game_over_menu.png"), (720, 384)))
         self.game.screen.blit(self.background, (0, 0))
         pg.display.update(self.background.get_rect())
         self.selections = [
-            Button(self.all_sprites, Vector2(self.game.window_size[0] / 2, 100), 30, (200, 200, 200),
-                   "restart game", lambda: self.reset_game())
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2), lambda: self.reset_game(),
+                            [pg.transform.scale(image, (528, 96)) for image in
+                             [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
+                              ["0",
+                               "1"
+                               ]]])
         ]
-        # reset selection to 0
-        self.selector = Selector(self.all_sprites, Vector2(self.game.window_size[0] / 2 + 100, 100), Vector2(100, 0))
-        self.selection = 0
-
-    def activate_selection(self):
-        """Activates selected button's defined function."""
-        self.selections[self.selection].function()
-
-    def update_selection(self, i):
-        """Changes selected button based on key presses."""
-        # switching delay
-        self.selection += i
-        # ensures selection is within bounds
-        if not 0 <= self.selection < len(self.selections):
-            self.selection -= i
-            return
-        # moves selector sprite
-        self.selector.change_selection(self.selections[self.selection].pos)
-        # resets switching frame delay
 
     def reset_game(self):
         self.game.game_state_manager.exit_state()

@@ -4,49 +4,69 @@ import pygame as pg
 class Button(pg.sprite.Sprite):
     # TODO: change to image instead of text
     """Button class with a text image and associated function that is executed on demand."""
-    def __init__(self, group, pos, size, color, text, function, font='arialunicode'):
+    def __init__(self, group, game_state, pos, function, images):
         super().__init__(group)
-        self.text = text
+        self.game_state = game_state
         self.pos = pos
         # function to be executed when button is activated
         self.function = function
         # font object of the button
-        self.font = pg.font.SysFont(font, size)
-        self.image = self.font.render(self.text, False, color)
+        self.images = images
+        self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.rect.center = self.pos.x, self.pos.y
+        self.selected = False
 
 
-class Selector(pg.sprite.Sprite):
-    # TODO: add arrow-like image to the selector
-    """
-    Selector class that can move between different selection positions.
-    Used for selecting between multiple options.
-    """
-    def __init__(self, group, pos, spacing):
-        super().__init__(group)
-        self.pos = pos
-        # spacing relative to the selected position, can be used to offset from selected option
-        self.spacing = spacing
-        self.image = pg.surface.Surface((30, 30))
-        self.image.fill((255, 255, 0))
-        self.rect = self.image.get_rect()
-        self.rect.center = self.pos.x, self.pos.y
+class TextButton(Button):
+    """Button class with a text image and associated function that is executed on demand."""
+    def __init__(self, group, game_state, pos, function, size, color, text, font='arialunicode'):
+        self.size = size
+        self.font = pg.font.SysFont(font, self.size)
+        self.text = text
+        super().__init__(group, game_state, pos, function, [self.font.render(self.text, False, color)])
 
-    def change_selection(self, new_pos):
-        """Changes selection to a new position."""
-        self.pos = new_pos + self.spacing
+
+class ClickableButton(Button):
+    HOVER_ALPHA = 50
+
+    def __init__(self, group, game_state, pos, function, images, default_index=0, selected_index=1,):
+        super().__init__(group, game_state, pos, function, images)
+        self.default_index = default_index
+        self.selected_index = selected_index
+        self.rect.midtop = self.pos.x, self.pos.y
+        self.prev_selected = self.selected
 
     def update(self):
-        self.rect.center = self.pos.x, self.pos.y
+        mouse_pos = self.game_state.mouse_pos
+        if self.rect.left < mouse_pos[0] < self.rect.right and self.rect.top < mouse_pos[1] < self.rect.bottom:
+            if self.game_state.controls.mouse_downs[pg.BUTTON_LEFT]:
+                self.selected = True
+                self.image = self.images[self.selected_index]
+            else:
+                self.selected = False
+                self.image = self.images[self.default_index]
+            self.hover_mask((255, 255, 255))
+        elif not self.selected:
+            self.selected = False
+            self.image = self.images[self.default_index]
+
+    def hover_mask(self, color):
+        """Masks the entity a color to indicate hovering"""
+        button_mask = pg.mask.from_surface(self.image)
+        damage_mask = button_mask.to_surface(setcolor=color)
+        damage_mask.set_colorkey((0, 0, 0))
+        damage_mask.set_alpha(ClickableButton.HOVER_ALPHA)
+        self.image = self.image.copy()
+        self.image.blit(damage_mask, (0, 0))
 
 
 class Box(pg.sprite.Sprite):
-    def __init__(self, group, pos1, pos2, color):
+    def __init__(self, game_state, group, pos, image):
         super().__init__(group)
-        self.pos = (pos1 + pos2) / 2
-        self.image = pg.surface.Surface((int((pos2 - pos1).x), int((pos2 - pos1).y)))
-        self.image.fill(color)
+        self.game_state = game_state
+        self.pos = pos
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.center = self.pos.x, self.pos.y
 

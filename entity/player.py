@@ -92,7 +92,7 @@ class Player(AbilityEntity):
             return
         elif self.death_animation_counter == 0:
             self.kill()
-            self.game_state.game.game_state_manager.switch_state_from_pool("game_over")
+            self.game_state.game.game_state_manager.switch_state_from_pool("quit_to_menu")
 
         self.dir = Vector2(self.game_state.controls.key_presses[pg.K_d] - self.game_state.controls.key_presses[pg.K_a],
                            self.game_state.controls.key_presses[pg.K_s] - self.game_state.controls.key_presses[pg.K_w])
