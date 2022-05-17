@@ -2,7 +2,7 @@
 #################################################################
 #  A    A          B     ##                A       ##        B  #
 #   F            SSSSSSS ##      S       S         ##           #
-#      SSS                        S       S        ##      SSS  #
+#      SSS                        S       S        ##   R  SSS  #
 #  SS  SSS           H             S   S   S       ##     SSSS  #
 #  SS                                 S            ##      SSS  #
 #                SSSSSSS ##          S      R      ##           #
@@ -11,7 +11,7 @@
 #####  ########################   #####################        ##
 #####  ########################   #####################        ##
 #  A        ##   A    B                            ##           #
-#           ## SSSS             S          SSSSSSS ##           #
+#           ## SSSS             S          SSSSSSS ##     F     #
 #           ## S  S            SSS          SS                  #
 #           ## S              SSSSS                        S    #
 #           ## S               SSS                              #
@@ -23,7 +23,7 @@
 #               AA  AA      SSSSSSSSS              ##   A   A   #
 #   SSS                                      S  S  ##           #
 #   S S                              F       S  S  ##           #
-#   SSS          SSSSS                       S  S  ##           #
+#   SSS          SSSSS                       S  S  ##  HH       #
 #                                   H        S  S  ##           #
 #                                            S  S  ##      S    #
 #                                                  ##           #
@@ -31,9 +31,9 @@
 #                                                  #####   ######
 ########################################################   ######
 #           ##  A    A   #   B  B  B                            #
-#           ##           #                                      #
+#           ##           #  R                                   #
 #                        #                                      #
-#                        #                                      #
+#    F                   #                           FR         #
 #                        #                                      #
 #           ##           #                                      #
 #           ##           #                                      #
@@ -41,10 +41,10 @@
 #  #   #                   ##        ##                         #
 ####   ######################        ############################
 #                        ##                                     #
-# SS   SSSSSSSSSSSSSSSSS ##  S     S                            #
+# SS   SSSSSSSSSSSSSSSSS ##  S     S                  R      R  #
 # S                          S    SS  SSS                       #
-# S                          SSS       S                   SSS  #
-# S                            S                             S  #
+# S    FHR                   SSS       S                   SSS  #
+# S                            S   H                         S  #
 # SSSSSSSSSSSSSSSSSSSSSS ##        SSS                       S  #
-#                        ##                                     #
+#                        ##                          R      R   #
 #################################################################
