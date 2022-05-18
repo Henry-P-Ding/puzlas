@@ -155,7 +155,7 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        background_image = pg.image.load("assets/map/map.png")
+        background_image = pg.image.load("assets/map/playing_state_map_0.png")
         self.background = pg.transform.scale(background_image,
                                              (background_image.get_width() * 4, background_image.get_height() * 4))
         self.on_camera_background = pg.Surface([self.shake_screen.get_width() + 2 * self.tile_size, self.shake_screen.get_height() + 2 * self.tile_size])
@@ -174,6 +174,8 @@ class PlayingState(GameState):
         self.player_group.add(self.player)
         # wall sprites for collision
         self.walls = pg.sprite.Group()
+        # movable objects
+        self.movables = pg.sprite.Group()
         # enemy sprites
         self.enemies = pg.sprite.Group()
         # particle sprites
@@ -321,18 +323,6 @@ class SelectionMenu(GameState):
             if selection.selected:
                 selection.function()
 
-    def update_selection(self, i):
-        """Changes selected button based on key presses."""
-        # switching delay
-        self.selection += i
-        # ensures selection is within bounds
-        if not 0 <= self.selection < len(self.selections):
-            self.selection -= i
-            return
-        # moves selector sprite
-        self.selector.change_selection(self.selections[self.selection].pos)
-        # resets switching frame delay
-
     def exit(self):
         self.all_sprites.empty()
         self.gui_sprites.empty()
@@ -341,28 +331,122 @@ class SelectionMenu(GameState):
 
 
 class StartMenu(SelectionMenu):
+    SCROLL_FORCE = 0.1
 
     def __init__(self, game, name):
         super().__init__(game, name)
-        # sets controls
-        self.controls = controls.StartMenuControls(self.game)
+        self.controls = None
         self.title_box = None
+        self.shake_screen = None
+        self.camera_pos = None
+        self.prev_mouse_pos = None
+        self.void_color = (41, 41, 54)
+        self.camera_acc = None
+        self.camera_vel = None
+        # tile dimensions
+        self.tile_size = 64
+        self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
+        # sets all_sprites group to draw by order of y_position
+        self.all_sprites = VerticalOrderSprites()
+        # map ornaments
+        self.map_ornaments = pg.sprite.Group()
+        # wall sprites for collision
+        self.walls = pg.sprite.Group()
+        # enemy sprites
+        self.enemies = pg.sprite.Group()
+        # particle sprites
+        self.particles = pg.sprite.Group()
+        self.player = None
+        self.player_group = None
+        self.level_creator = None
 
     def load(self):
-        self.background = pg.Surface(self.game.window_size)
-        self.background.fill((0, 0, 0))
-        self.title_box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
-                       pg.image.load("assets/gui/menu/start_menu/start_menu_base.png"))
-        self.game.screen.blit(self.background, (0, 0))
+        # tile dimensions
+        self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
+        self.camera_pos = Vector2(0, 0)
+        self.prev_mouse_pos = self.mouse_pos[0], self.mouse_pos[1]
+        self.camera_acc = Vector2(0, 0)
+        self.camera_vel = Vector2(0, 0)
+        self.background = pg.transform.scale(pg.image.load("assets/map/start_menu_map_0.png"), (self.game.window_size[0] * 3, self.game.window_size[1] * 3))
+        self.game.screen.blit(self.background, (0, 0), (
+            self.game.window_size[0] + self.camera_pos.x,
+            self.game.window_size[1] + self.camera_pos.y,
+            self.game.window_size[0],
+            self.game.window_size[1]
+        ))
         pg.display.update(self.background.get_rect())
+        self.title_box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] * 1/2),
+                       pg.image.load("assets/gui/menu/start_menu/start_menu_base.png"))
+        # sets controls
+        self.controls = controls.StartMenuControls(self.game)
         self.selections = [
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 320), lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 4/8), lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
                             [pg.image.load(f"assets/gui/button/play/play_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 416), lambda: print("opening options"),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 5/8), lambda: print("opening options"),
                             [pg.image.load(f"assets/gui/button/options/options_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 512), lambda: self.game.stop(),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 6/8), lambda: self.game.stop(),
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
+        self.level_creator = LevelCreator(self, Vector2(1, 1))
+        self.level_creator.create_level(self.level_creator.load_from_file('start_menu_level.txt'))
+
+    def update(self):
+        """Update step in game state loop."""
+        # updates game sprites
+        self.all_sprites.update()
+        # update GUI sprites
+        self.gui_sprites.update()
+        self.camera_acc = Vector2(self.mouse_pos[0] - self.prev_mouse_pos[0],
+                                  self.mouse_pos[1] - self.prev_mouse_pos[1])
+        if self.camera_acc.magnitude_squared() != 0:
+            self.camera_acc = self.camera_acc.normalize()
+        if self.camera_vel.x != 0:
+            self.camera_vel.x += self.camera_acc.x * StartMenu.SCROLL_FORCE - self.camera_vel.x / abs(self.camera_vel.x) * (self.camera_vel.x * self.camera_vel.x) * 0.01
+        else:
+            self.camera_vel.x += self.camera_acc.x * StartMenu.SCROLL_FORCE
+        if self.camera_vel.y != 0:
+            self.camera_vel.y += self.camera_acc.y * StartMenu.SCROLL_FORCE - self.camera_vel.y / abs(self.camera_vel.y) * (self.camera_vel.y * self.camera_vel.y) * 0.01
+        else:
+            self.camera_vel.y += self.camera_acc.y * StartMenu.SCROLL_FORCE
+        self.camera_vel = self.camera_vel if self.camera_vel.magnitude_squared() > 0.01 else Vector2(0, 0)
+        self.camera_pos += self.camera_vel
+        if not(-self.game.window_size[0] < self.camera_pos.x < self.game.window_size[0] and -self.game.window_size[1] < self.camera_pos.y < self.game.window_size[1]):
+            self.camera_pos -= self.camera_vel
+        for sprite in self.all_sprites.sprites():
+            sprite.pos -= self.camera_vel
+        self.prev_mouse_pos = self.mouse_pos[0], self.mouse_pos[1]
+
+
+    def render(self):
+        """Renders all game objects."""
+        tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        tint.fill((0, 0, 0))
+        tint.set_alpha(100)
+
+        sprite_background = pg.Surface(self.game.window_size)
+        sprite_background.fill(self.void_color)
+        sprite_background.blit(self.background, (0, 0), (
+            self.game.window_size[0] + self.camera_pos.x,
+            self.game.window_size[1] + self.camera_pos.y,
+            self.game.window_size[0],
+            self.game.window_size[1]
+        ))
+        # clears sprites from the screen
+        self.game.screen.fill(self.void_color)
+        self.game.screen.blit(self.background, (0, 0), (
+            self.game.window_size[0] + self.camera_pos.x,
+            self.game.window_size[1] + self.camera_pos.y,
+            self.game.window_size[0],
+            self.game.window_size[1]
+        ))
+        self.all_sprites.clear(self.game.screen, sprite_background)
+        self.all_sprites.draw(self.game.screen)
+        self.game.screen.blit(tint, (0, 0))
+        # gui updates
+        sprite_background.blit(tint, (0, 0))
+        self.gui_sprites.clear(self.game.screen, self.game.screen)
+        self.gui_sprites.draw(self.game.screen)
+        pg.display.update()
 
 
 class PauseMenu(SelectionMenu):

@@ -112,7 +112,8 @@ class Pathfinder(Enemy):
 
     def path_find_to_player(self):
         """Path finds to player"""
-        self.path_find_to(self.game_state.player)
+        if self.game_state.player is not None:
+            self.path_find_to(self.game_state.player)
 
     def path_find_to(self, entity):
         if not (0 < self.pos.x < self.game_state.game.window_size[0] and 0 < self.pos.y <
@@ -138,9 +139,8 @@ class Pathfinder(Enemy):
                 u = v + move
 
                 # check if is in boundary
-                if self.game_state.level_creator.level[
-                    int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][
-                    int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)] == "#":
+                tile = self.game_state.level_creator.level[int(self.game_state.level_creator.stage.y * self.game_state.tile_dim[1] + u.y)][int(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0] + u.x)]
+                if tile == "#" or tile == "S":
                     continue
 
                 if 0 < u.x < level_size[0] and 0 < u.y < level_size[1] and not visited[int(u.y)][int(u.x)] and \
@@ -273,8 +273,7 @@ class FireMage(Pathfinder):
 
     def attack(self):
         """Attacks player within a certain range."""
-
-        if not self.game_state.player.dead and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+        if not self.game_state.player is None and not self.game_state.player.dead and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
             self.firing = True
 
@@ -368,7 +367,7 @@ class RootMage(Pathfinder):
 
     def attack(self):
         """Attacks player within a certain range."""
-        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+        if self.game_state.player is not None and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
             self.firing = True
 
@@ -462,7 +461,7 @@ class HookMage(Pathfinder):
 
     def attack(self):
         """Attacks player within a certain range."""
-        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+        if self.game_state.player is not None and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
             self.activate_ability()
             self.firing = True
 

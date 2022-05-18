@@ -24,7 +24,8 @@ class LevelCreator:
             "H": self.place_hook_mage,
             "A": self.place_fountain,
             "B": self.place_fountain,
-            "S": self.place_spike
+            "S": self.place_spike,
+            "V": self.place_movable
         }
 
     def create_level(self, level_data):
@@ -74,6 +75,12 @@ class LevelCreator:
                       damage=Spike.DAMAGE,
                       damage_list=[self.game_state.enemies, self.game_state.player_group])
         self.game_state.map_ornaments.add(spike)
+
+    def place_movable(self, tile_x, tile_y):
+        movable = Movable(group=self.game_state.all_sprites,
+                          game_state=self.game_state,
+                          pos=Vector2((tile_x + 0.5) * self.game_state.tile_size, (tile_y + 0.5) * self.game_state.tile_size))
+        self.game_state.movables.add(movable)
 
     def place_player(self, tile_x, tile_y):
         """Places player object at tile location."""

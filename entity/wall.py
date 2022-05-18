@@ -8,6 +8,9 @@ class Wall(Entity):
     """
     def __init__(self, group, game_state, pos):
         super().__init__(group, game_state, pos, [pg.Surface([0, 0], pg.SRCALPHA)])
-        self.image.fill((50, 50, 50, 0))
+        self.rect.update(self.pos.x, self.pos.y, self.game_state.tile_size, self.game_state.tile_size)
+        self.hit_box.update(self.pos.x, self.pos.y, self.game_state.tile_size, self.game_state.tile_size)
+
+    def update(self):
         self.rect.update(self.pos.x, self.pos.y, self.game_state.tile_size, self.game_state.tile_size)
         self.hit_box.update(self.pos.x, self.pos.y, self.game_state.tile_size, self.game_state.tile_size)

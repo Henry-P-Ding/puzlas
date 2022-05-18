@@ -1,7 +1,6 @@
-import pygame as pg
-from entity.game_entity import Entity
 from entity.game_entity import DamageSource
 from entity.particle import LavaParticle
+from entity.wall import *
 from pygame.math import *
 import random
 
@@ -16,36 +15,45 @@ class Fountain(Entity):
     PARTICLES_PER_CYCLE = 6
 
     def __init__(self, group, game_state, pos, color):
-        self.particle_spawn_frames = [random.randint(0, Fountain.PARTICLE_CYCLE) for x in range(Fountain.PARTICLES_PER_CYCLE)]
+        self.particle_spawn_frames = [random.randint(0, Fountain.PARTICLE_CYCLE) for x in
+                                      range(Fountain.PARTICLES_PER_CYCLE)]
         if color == "red":
             super().__init__(group, game_state, pos,
-                [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
-                 [pg.image.load("assets/map_ornament/fountain/red_fountain/red_fountain_{0}.png".format(x)) for x in
-                  ["0",
-                   "1",
-                   "2"
-                   ]]])
+                             [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                              [pg.image.load("assets/map_ornament/fountain/red_fountain/red_fountain_{0}.png".format(x))
+                               for x in
+                               ["0",
+                                "1",
+                                "2"
+                                ]]])
             self.red = True
         else:
             super().__init__(group, game_state, pos,
-                [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
-                 [pg.image.load("assets/map_ornament/fountain/blue_fountain/blue_fountain_{0}.png".format(x)) for x in
-                  ["0",
-                   "1",
-                   "2"
-                   ]]])
+                             [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
+                              [pg.image.load(
+                                  "assets/map_ornament/fountain/blue_fountain/blue_fountain_{0}.png".format(x)) for x in
+                               ["0",
+                                "1",
+                                "2"
+                                ]]])
             self.red = False
         self.pos.y -= self.game_state.tile_size
         self.rect.update(self.pos.x, self.pos.y, self.game_state.tile_size, 2 * self.game_state.tile_size)
-        self.hit_box.update(self.pos.x, self.pos.y + self.game_state.tile_size / 2, self.game_state.tile_size, self.game_state.tile_size)
-
+        self.hit_box.update(self.pos.x, self.pos.y + self.game_state.tile_size / 2, self.game_state.tile_size,
+                            self.game_state.tile_size)
+        
     def update(self):
         self.frame_counter += 1
         self.animate()
         if self.red and self.frame_counter % Fountain.PARTICLE_CYCLE in self.particle_spawn_frames:
-            self.game_state.particles.add(LavaParticle(self.game_state.all_sprites, self.game_state, 
-                                                       Vector2(self.pos.x + 5 + random.random() * (self.rect.width - 10), 
-                                                               self.pos.y + self.hit_box.height + random.random() * 4 - 2)))
+            self.game_state.particles.add(LavaParticle(self.game_state.all_sprites, self.game_state,
+                                                       Vector2(
+                                                           self.pos.x + 5 + random.random() * (self.rect.width - 10),
+                                                           self.pos.y + self.hit_box.height + random.random() * 4 - 2)))
+        self.rect.update(self.pos.x, self.pos.y, self.game_state.tile_size, 2 * self.game_state.tile_size)
+        self.hit_box.update(self.pos.x, self.pos.y + self.game_state.tile_size / 2, self.game_state.tile_size,
+                            self.game_state.tile_size)
+        print('pupdating fountain')
 
     def animate(self):
         new_image = self.images[((self.frame_counter // Fountain.ANIMATION_SPEED) % Fountain.ANIMATION_MODULUS)]
@@ -55,6 +63,41 @@ class Fountain(Entity):
         self.image = image
         self.rect = self.image.get_rect()
         self.rect.update(self.pos.x, self.pos.y, self.game_state.tile_size, 2 * self.game_state.tile_size)
+
+
+class Movable(Entity):
+    SPEED = 1
+
+    def __init__(self, group, game_state, pos):
+        super().__init__(group, game_state, pos, [pg.Surface([game_state.tile_size, game_state.tile_size])])
+        self.image.fill((255, 255, 0))
+        self.moving = False
+        self.moving_timer = 0
+        self.collision_direction = Vector2(0, 0)
+        self.speed = Movable.SPEED
+        self.time = self.game_state.tile_size / self.speed
+
+    def update(self):
+        if self.moving_timer > 0:
+            self.vel = self.collision_direction.copy() * self.speed
+            self.moving_timer -= 1
+        else:
+            self.moving = False
+            self.vel = Vector2(0, 0)
+
+        self.pos += self.vel
+        self.hit_box.center = self.pos.x, self.pos.y
+        if pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+            while pg.sprite.spritecollideany(self, self.game_state.walls, collided=Entity.collided) is not None:
+                if self.vel.magnitude_squared() != 0:
+                    self.pos -= self.vel.normalize()
+                self.hit_box.center = self.pos.x, self.pos.y
+        self.rect.center = self.pos.x, self.pos.y
+
+    def start_moving(self):
+        assert not self.moving, "Movable can not start moving while already moving"
+        self.moving = True
+        self.moving_timer = self.time
 
 
 class Spike(DamageSource):
@@ -67,6 +110,7 @@ class Spike(DamageSource):
     DAMAGE_FLASH_COLOR = (255, 255, 255)
 
     """Spike that pops up from the ground and does damage to entities"""
+
     def __init__(self, group, game_state, pos, damage, damage_list):
         super().__init__(group, game_state, pos, damage, Spike.COOL_DOWN, [], damage_list,
                          [pg.transform.scale(image, (64, 64)) for image in
@@ -81,7 +125,8 @@ class Spike(DamageSource):
         self.pos.y -= self.game_state.tile_size
         self.animation_counter = 0
         self.cool_down_counter = 0
-        self.rect.update(self.pos.x, self.pos.y + self.game_state.tile_size, self.game_state.tile_size, self.game_state.tile_size)
+        self.rect.update(self.pos.x, self.pos.y + self.game_state.tile_size, self.game_state.tile_size,
+                         self.game_state.tile_size)
         self.hit_box = self.rect.copy()
 
     def update(self):
@@ -109,7 +154,7 @@ class Spike(DamageSource):
     def on_damage(self, entity):
         self.cool_down_counter = 180
         self.damage_flash(entity, Spike.DAMAGE_FLASH_COLOR)
-        
+
     def damaging(self, entity):
         if entity.frame_counter - entity.damage_frame <= Spike.DAMAGE_FLASH_TIME:
             self.damage_flash(entity, Spike.DAMAGE_FLASH_COLOR)
@@ -118,7 +163,8 @@ class Spike(DamageSource):
         if self.animation_counter > 0:
             self.animation_counter -= 1
             if self.spike_up:
-                index = Spike.ANIMATION_MODULUS - ((self.animation_counter // Spike.ANIMATION_SPEED) % Spike.ANIMATION_MODULUS) - 1
+                index = Spike.ANIMATION_MODULUS - (
+                            (self.animation_counter // Spike.ANIMATION_SPEED) % Spike.ANIMATION_MODULUS) - 1
             else:
                 index = (self.animation_counter // Spike.ANIMATION_SPEED) % Spike.ANIMATION_MODULUS
             self.switch_image(self.images[index])
@@ -126,4 +172,5 @@ class Spike(DamageSource):
     def switch_image(self, image):
         self.image = image
         self.rect = self.image.get_rect()
-        self.rect.update(self.pos.x, self.pos.y + self.game_state.tile_size, self.game_state.tile_size, self.game_state.tile_size)
+        self.rect.update(self.pos.x, self.pos.y + self.game_state.tile_size, self.game_state.tile_size,
+                         self.game_state.tile_size)
