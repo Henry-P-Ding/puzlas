@@ -312,6 +312,7 @@ class ShootFireball(Ability):
         super().__init__(sprite, ShootFireball.COOL_DOWN, kill_list, damage_list)
         # list of fireball entities
         self.fireballs = []
+        self.damage = ShootFireball.DAMAGE
 
     def activate(self, dir):
         if self.off_cooldown() and len(self.fireballs) < ShootFireball.MAX_FIREBALLS:
@@ -331,7 +332,7 @@ class ShootFireball(Ability):
                                        game_state=self.sprite.game_state,
                                        pos=Vector2(self.sprite.pos.x, self.sprite.pos.y),
                                        vel=ShootFireball.FIRE_BALL_SPEED * randomized_dir,
-                                       damage=ShootFireball.DAMAGE,
+                                       damage=self.damage,
                                        kill_list=self.kill_list,
                                        damage_list=self.damage_list))
 

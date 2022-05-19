@@ -50,15 +50,21 @@ class HealthEntity(Entity):
 
 
 class AbilityEntity(HealthEntity):
-    def __init__(self, group, game_state, pos, images, health, ability=None):
+    def __init__(self, group, game_state, pos, images, health, ability=None, secondary_ability=None):
         super().__init__(group, game_state, pos, images, health)
         self.ability = ability
-        self.ability_active = False
+        self.secondary_ability = secondary_ability
+        self.primary_ability_active = False
+        self.secondary_ability_active = False
         self.ability_activate_frame = None
 
-    def set_ability_active(self, val):
+    def set_primary_ability_active(self, val):
         assert isinstance(val, bool), "Must change ability_active to only bool"
-        self.ability_active = val
+        self.primary_ability_active = val
+
+    def set_secondary_ability_active(self, val):
+        assert isinstance(val, bool), "Must change ability_active to only bool"
+        self.secondary_ability_active = val
 
     def death_behavior(self):
         new_ability = self.ability.create_copy(self.game_state.player, [self.game_state.enemies, self.game_state.walls],

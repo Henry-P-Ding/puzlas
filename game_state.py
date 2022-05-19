@@ -176,6 +176,10 @@ class PlayingState(GameState):
         self.walls = pg.sprite.Group()
         # movable objects
         self.movables = pg.sprite.Group()
+        # door objects
+        self.doors = pg.sprite.Group()
+        # arrow shooter objects
+        self.arrow_shooters = pg.sprite.Group()
         # enemy sprites
         self.enemies = pg.sprite.Group()
         # particle sprites
@@ -186,10 +190,11 @@ class PlayingState(GameState):
         # example level
         self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
+        self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
         # check if screen has been entirely updated after shaking
         self.post_shake_screen_update = False
-    
+
         # menu gui
         self.ability_indicator = IndicatorBar(self.gui_sprites, Vector2(16, 80), (64, 64), 
                                               [pg.image.load(f"assets/gui/ability_icon/{name}.png") for name in

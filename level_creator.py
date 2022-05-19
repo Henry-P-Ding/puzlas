@@ -25,7 +25,9 @@ class LevelCreator:
             "A": self.place_fountain,
             "B": self.place_fountain,
             "S": self.place_spike,
-            "V": self.place_movable
+            "V": self.place_movable,
+            "D": self.place_door,
+            "G": self.place_arrow_gun
         }
 
     def create_level(self, level_data):
@@ -81,6 +83,25 @@ class LevelCreator:
                           game_state=self.game_state,
                           pos=Vector2((tile_x + 0.5) * self.game_state.tile_size, (tile_y + 0.5) * self.game_state.tile_size))
         self.game_state.movables.add(movable)
+
+    def place_door(self, tile_x, tile_y):
+        door = Door(group=self.game_state.all_sprites,
+                    game_state=self.game_state,
+                    pos1=Vector2((tile_x + 0.5) * self.game_state.tile_size, (tile_y + 0.5) * self.game_state.tile_size),
+                    pos2=Vector2((tile_x + 0.5) * self.game_state.tile_size, (tile_y + 0.5) * self.game_state.tile_size),
+                    size=(64, 64))
+        self.game_state.doors.add(door)
+
+    def place_arrow_gun(self, tile_x, tile_y):
+        shooter = ArrowGun(group=self.game_state.all_sprites,
+                           game_state=self.game_state,
+                           pos=Vector2((tile_x + 0.5) * self.game_state.tile_size, (tile_y + 0.5) * self.game_state.tile_size),
+                           damage=100,
+                           dir=Vector2(0, 1),
+                           constant_firing=True,
+                           aiming=True)
+        self.game_state.arrow_shooters.add(shooter)
+        #self.game_state.walls.add(shooter)
 
     def place_player(self, tile_x, tile_y):
         """Places player object at tile location."""
