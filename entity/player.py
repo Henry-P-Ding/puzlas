@@ -108,6 +108,8 @@ class Player(AbilityEntity):
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
+        else:
+            self.rooted = False
         self.health_bar.change_indicator(self.health)
 
         # movement

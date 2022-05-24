@@ -178,6 +178,8 @@ class PlayingState(GameState):
         self.movables = pg.sprite.Group()
         # door objects
         self.doors = pg.sprite.Group()
+        # lever objects
+        self.levers = pg.sprite.Group()
         # arrow shooter objects
         self.arrow_shooters = pg.sprite.Group()
         # enemy sprites
@@ -188,7 +190,7 @@ class PlayingState(GameState):
         self.controls = controls.PlayingControls(self.game)
 
         # example level
-        self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
+        self.level_creator.create_level(self.level_creator.load_from_file('level_0.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
         self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
@@ -248,8 +250,10 @@ class PlayingState(GameState):
                 self.player.pos.x = screen_bound.x % self.game.window_size[0]
             elif screen_bound.y != 0:
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
+            self.player.wall_hit_box.center = self.player.pos.x, self.player.pos.y + self.player.hit_box.height / 4
+            self.player.hit_box.center = self.player.pos.x, self.player.pos.y
             # populates game with new sprites from the new stage
-            self.level_creator.create_level(self.level_creator.level)
+            self.level_creator.load_stage()
             # draws new background
             self.on_camera_background.fill(self.void_color)
             self.on_camera_background.blit(self.background, (0, 0),
@@ -393,7 +397,8 @@ class StartMenu(SelectionMenu):
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
         self.level_creator = LevelCreator(self, Vector2(1, 1))
-        self.level_creator.create_level(self.level_creator.load_from_file('start_menu_level.txt'))
+        self.level_creator.level = self.level_creator.load_from_file('start_menu_level.txt')
+        self.level_creator.load_stage()
 
     def update(self):
         """Update step in game state loop."""

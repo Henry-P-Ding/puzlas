@@ -48,8 +48,7 @@ class PlayingControls(Controls):
             pg.K_a: lambda: self.set_pressed_map(pg.K_a, True),
             pg.K_w: lambda: self.set_pressed_map(pg.K_w, True),
             pg.K_s: lambda: self.set_pressed_map(pg.K_s, True),
-            # TODO: Remove this debugging
-            pg.K_SPACE: lambda: self.open_all_doors()
+            pg.K_SPACE: lambda: self.flip_lever()
         }
         self.event_maps["key_up"] = {
             pg.K_d: lambda: self.set_pressed_map(pg.K_d, False),
@@ -67,10 +66,13 @@ class PlayingControls(Controls):
             pg.BUTTON_RIGHT: lambda: self.game.game_state_manager.current_state().player.set_secondary_ability_active(False)
         }
 
-    # TODO: Remove this debugging
-    def open_all_doors(self):
-        for door in self.game.game_state_manager.current_state().doors.sprites():
-            door.interact()
+    def flip_lever(self):
+        game_state = self.game.game_state_manager.current_state()
+        min_sq_d = game_state.tile_size * game_state.tile_size
+        for lever in game_state.levers.sprites():
+            if (game_state.player.pos - lever.pos).magnitude_squared() < min_sq_d:
+                lever.activated = not lever.activated
+                break
 
     def set_pressed_map(self, key, val):
         self.key_presses[key] = val

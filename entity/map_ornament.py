@@ -1,5 +1,3 @@
-from entity.game_entity import DamageSource
-from entity.particle import LavaParticle
 from entity.ability import *
 from entity.wall import *
 from pygame.math import *
@@ -103,28 +101,46 @@ class Movable(Entity):
 class Door(Entity):
     ANIMATION_LENGTH = 30
 
-    def __init__(self, group, game_state, pos1, pos2, size):
-        super().__init__(group, game_state, (pos1+pos2)/2, [pg.Surface([game_state.tile_size, game_state.tile_size], pg.SRCALPHA), pg.Surface([1, 1], pg.SRCALPHA)])
-        self.open = False
+    def __init__(self, group, game_state, pos1, pos2, activation_condition):
+        super().__init__(group, game_state, (pos1+pos2)/2, [pg.Surface([abs(pos2.x - pos1.x + game_state.tile_size), abs(pos2.y - pos1.y + game_state.tile_size)], pg.SRCALPHA), pg.Surface([1, 1], pg.SRCALPHA)])
         self.image.fill((255, 255, 0, 255))
+        self.open = False
         self.interacting = False
         self.interact_timer = 0
         self.hit_box.size = pos2.x - pos1.x + self.game_state.tile_size, pos2.y - pos1.y + self.game_state.tile_size
+        self.activation_condition = activation_condition
+        self.will_close = False
+        if self.hit_box.colliderect(self.game_state.player.wall_hit_box):
+            self.open = True
+            self.switch_image(self.images[1])
+            self.will_close = True
 
     def update(self):
-        if self.interact_timer > 0:
-            self.animate()
-            self.interact_timer -= 1
+        if self.will_close:
+            if not self.hit_box.colliderect(self.game_state.player.wall_hit_box):
+                self.interact()
+                self.will_close = False
         else:
-            self.interacting = False
+            if self.activation_condition.condition(self.game_state):
+                self.open_door()
 
-        if self.open:
-            self.game_state.walls.remove(self)
-        else:
-            self.game_state.walls.add(self)
+            if self.interact_timer > 0:
+                self.animate()
+                self.interact_timer -= 1
+            else:
+                self.interacting = False
+
+            if self.open:
+                self.game_state.walls.remove(self)
+            else:
+                self.game_state.walls.add(self)
 
         self.hit_box.center = self.pos.x, self.pos.y
         self.rect.center = self.pos.x, self.pos.y
+
+    def open_door(self):
+        if not self.open:
+            self.interact()
 
     def interact(self):
         if not self.interacting:
@@ -164,34 +180,86 @@ class Door(Entity):
                 self.switch_image(self.images[0])
 
 
-class ArrowGun(Entity):
+class ActivationCondition:
 
-    def __init__(self, group, game_state, pos, damage, dir, firing_delay=60, constant_firing=False, aiming=False):
+    def __init__(self, id, additional_args=None):
+        if id == "enemy_dead":
+            self.condition = self.check_no_enemies
+        elif id == "not_enemy_dead":
+            self.condition = self.check_enemies
+        elif id == "lever":
+            assert additional_args is not None, "must provide additional args for lever condition"
+            self.condition = self.check_lever
+            self.lever_pos = Vector2(int(additional_args[0].split(',')[0]), int(additional_args[0].split(',')[1]))
+
+    def check_enemies(self, game_state):
+        return len(game_state.enemies.sprites()) != 0
+
+    def check_no_enemies(self, game_state):
+        return len(game_state.enemies.sprites()) == 0
+
+    def check_lever(self, game_state):
+        for lever in game_state.levers.sprites():
+            if lever.pos == (Vector2(self.lever_pos.x % game_state.tile_dim[0], self.lever_pos.y % game_state.tile_dim[1]) + Vector2(0.5, 0.5)) * game_state.tile_size:
+                return lever.activated
+
+
+class Lever(Entity):
+    def __init__(self, group, game_state, pos):
+        super().__init__(group, game_state, pos, [pg.Surface([game_state.tile_size, game_state.tile_size]),
+                                                  pg.Surface([game_state.tile_size, game_state.tile_size])])
+        self.images[0].fill((0, 255, 255))
+        self.images[1].fill((255, 0, 255))
+        self.hit_box.height = self.hit_box.height / 2
+        self.hit_box.top = self.pos.y
+        self.activated = False
+
+    def update(self):
+        self.animate()
+        self.hit_box.midtop = self.pos.x, self.pos.y
+        self.rect.center = self.pos.x, self.pos.y
+
+    def animate(self):
+        if self.activated:
+            self.switch_image(self.images[1])
+        else:
+            self.switch_image(self.images[0])
+
+
+class ArrowGun(Entity):
+    FIRING_DELAY = 60
+
+    def __init__(self, group, game_state, pos, damage, speed, dir, constant_firing, aiming, activation_condition):
         super().__init__(group, game_state, pos, [pg.Surface([1, 1])])
         self.image.fill((0, 0, 0, 0))
-        self.ability = ShootRoot(self, [self.game_state.walls, self.game_state.enemies, self.game_state.player_group], [self.game_state.enemies, self.game_state.player_group])
+        self.ability = ShootFireball(self, [self.game_state.walls, self.game_state.enemies, self.game_state.player_group, self.game_state.movables], [self.game_state.enemies, self.game_state.player_group])
         self.ability.damage = damage
-        self.firing_delay = firing_delay
+        self.ability.speed = speed
+        self.ability.spray_angle = 0
+        self.firing_delay = ArrowGun.FIRING_DELAY
         self.dir = dir.normalize()
         self.constant_firing = constant_firing
         self.aiming = aiming
+        self.activation_condition = activation_condition
+        self.frame_counter = self.ability.cooldown * ArrowGun.FIRING_DELAY
 
     def update(self):
-        self.frame_counter += 1
-        if self.constant_firing and self.frame_counter % self.firing_delay == 0:
-            if self.aiming:
-                min_dist = self.game_state.game.window_size[0] * self.game_state.game.window_size[0] + self.game_state.game.window_size[1] * self.game_state.game.window_size[1]
-                nearest_enemy = None
-                for group in self.ability.damage_list:
-                    for sprite in group:
-                        dist = (sprite.pos - self.pos).length_squared()
-                        if dist <= min_dist:
-                            min_dist = dist
-                            nearest_enemy = sprite
-                dir = (nearest_enemy.pos - self.pos).normalize()
-                self.fire(dir)
-            else:
-                self.fire(self.dir)
+        if self.activation_condition.condition(self.game_state):
+            if self.constant_firing and self.frame_counter % self.firing_delay == 0:
+                if self.aiming:
+                    min_dist = self.game_state.game.window_size[0] * self.game_state.game.window_size[0] + self.game_state.game.window_size[1] * self.game_state.game.window_size[1]
+                    nearest_enemy = None
+                    for group in self.ability.damage_list:
+                        for sprite in group:
+                            dist = (sprite.pos - self.pos).length_squared()
+                            if dist <= min_dist:
+                                min_dist = dist
+                                nearest_enemy = sprite
+                    dir = (nearest_enemy.pos - self.pos).normalize()
+                    self.fire(dir)
+                else:
+                    self.fire(self.dir)
+            self.frame_counter += 1
 
         self.hit_box.center = self.pos.x, self.pos.y
         self.rect.center = self.pos.x, self.pos.y

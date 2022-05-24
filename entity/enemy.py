@@ -245,6 +245,7 @@ class FireMage(Pathfinder):
         self.firing = False
 
     def update(self):
+        print(self.rooted)
         # path finds to the player
         self.path_find_to_player()
         # steer towards the nearest node if it can path to the player
@@ -256,6 +257,8 @@ class FireMage(Pathfinder):
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
+        else:
+            self.rooted = False
         # TODO: fix enemy getting hooked
         self.move()
         self.firing = False

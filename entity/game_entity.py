@@ -12,6 +12,8 @@ class Entity(pg.sprite.Sprite):
         super().__init__(group)
         self.game_state = game_state
         self.pos = pos
+        self.initial_pos = self.pos.copy()
+        self.initial_stage = self.game_state.level_creator.stage.copy()
         self.vel = Vector2(0, 0)
         self.images = images
         self.image = self.images[0]
@@ -41,6 +43,7 @@ class HealthEntity(Entity):
         self.damaged = False
         self.damage_source = None
         self.damage_frame = self.frame_counter
+        self.rooted = False
 
     def on_damage(self, source):
         pass
@@ -67,9 +70,21 @@ class AbilityEntity(HealthEntity):
         self.secondary_ability_active = val
 
     def death_behavior(self):
-        new_ability = self.ability.create_copy(self.game_state.player, [self.game_state.enemies, self.game_state.walls],
-                                               [self.game_state.enemies])
-        self.game_state.player.ability = new_ability
+        if not self in self.game_state.player_group.sprites():
+            new_ability = self.ability.create_copy(self.game_state.player,
+                                                   [self.game_state.enemies, self.game_state.walls],
+                                                   [self.game_state.enemies])
+            self.game_state.player.ability = new_ability
+            if self.rooted:
+                entity_mask = pg.mask.from_surface(self.images[0].copy())
+                damage_mask = entity_mask.to_surface(setcolor=(255, 255, 200))
+                damage_mask.set_colorkey((0, 0, 0))
+                damage_mask.set_alpha(100)
+                rooted_image = self.images[0].copy()
+                rooted_image.blit(damage_mask, (0, 0))
+                self.game_state.level_creator.place_movable_with_image(int((self.pos / self.game_state.tile_size).x),
+                                                                       int((self.pos / self.game_state.tile_size).y),
+                                                                       rooted_image)
         self.kill()
 
 
@@ -82,6 +97,7 @@ class DamageSource(Entity):
         # numerical damage value
         self.damage = damage
         # duration that other entities are considered in damage state
+        self.name = None
         self.damage_duration = duration
         self.kill_list = kill_list
         self.damage_list = damage_list

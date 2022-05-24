@@ -201,6 +201,9 @@ class Root(Projectile):
                         [pg.transform.scale(image, (100, 100)) for image in
                         [pg.image.load("assets/ability/Root/{0}.png".format(x)) for x in range (1,31)]])
         self.hit_box.size = 32,32
+        # TODO: add names to all damage sources
+        self.name = "root"
+
     def animate(self):
         """Animates fireball sprite."""
         self.switch_image(self.images[(self.frame_counter // Root.ANIMATION_SPEED) % Root.ANIMATION_MODULUS])
@@ -208,6 +211,7 @@ class Root(Projectile):
 
     def on_damage(self, entity):
         self.damage_flash(entity, Root.DAMAGE_FLASH_COLOR)
+        entity.rooted = True
 
     def damaging(self, entity):
         if entity.frame_counter - entity.damage_frame <= Root.DAMAGE_FLASH_TIME:
@@ -313,6 +317,8 @@ class ShootFireball(Ability):
         # list of fireball entities
         self.fireballs = []
         self.damage = ShootFireball.DAMAGE
+        self.speed = ShootFireball.FIRE_BALL_SPEED
+        self.spray_angle = ShootFireball.SPRAY_ANGLE
 
     def activate(self, dir):
         if self.off_cooldown() and len(self.fireballs) < ShootFireball.MAX_FIREBALLS:
@@ -324,14 +330,14 @@ class ShootFireball(Ability):
                 self.fireballs.remove(fire_ball)
 
     def shoot(self, dir):
-        spray_angle = random.uniform(-ShootFireball.SPRAY_ANGLE, ShootFireball.SPRAY_ANGLE)
+        spray_angle = random.uniform(-self.spray_angle, self.spray_angle)
         spray_vector = Vector2(math.cos(spray_angle), math.sin(spray_angle))
         randomized_dir = Vector2(dir.x * spray_vector.x - dir.y * spray_vector.y,
                                  dir.x * spray_vector.y + dir.y * spray_vector.x)
         self.fireballs.append(Fireball(group=self.sprite.game_state.all_sprites,
                                        game_state=self.sprite.game_state,
                                        pos=Vector2(self.sprite.pos.x, self.sprite.pos.y),
-                                       vel=ShootFireball.FIRE_BALL_SPEED * randomized_dir,
+                                       vel=self.speed * randomized_dir,
                                        damage=self.damage,
                                        kill_list=self.kill_list,
                                        damage_list=self.damage_list))
