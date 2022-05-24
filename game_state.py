@@ -155,7 +155,7 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        background_image = pg.image.load("assets/map/playing_state_map_0.png")
+        background_image = pg.image.load("assets/map/playing_state_map_1.png")
         self.background = pg.transform.scale(background_image,
                                              (background_image.get_width() * 4, background_image.get_height() * 4))
         self.on_camera_background = pg.Surface([self.shake_screen.get_width() + 2 * self.tile_size, self.shake_screen.get_height() + 2 * self.tile_size])
