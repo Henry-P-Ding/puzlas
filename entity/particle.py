@@ -138,3 +138,39 @@ class LavaParticle(Particle):
             self.radius = self.max_radius * (1 - (age - (1 - LavaParticle.FADE_RELEASE)) / LavaParticle.FADE_RELEASE)
         self.image.fill((0, 0, 0, 0))
         pg.draw.circle(self.image, self.color, (LavaParticle.RADIUS_MAX, LavaParticle.RADIUS_MAX), self.radius)
+
+
+class HealthParticle(Particle):
+    RADIUS_MIN, RADIUS_MAX = 2, 4
+    COLORS = [
+        (255, 0, 0),
+        (255, 53, 13),
+        (235, 34, 14),
+        (232, 12, 75),
+        (255, 13, 151)
+    ]
+    FADE_ATTACK = 0.5
+    FADE_RELEASE = 0.3
+
+    def __init__(self, group, game_state, pos, life_time):
+        super().__init__(group, game_state, pos,
+                         [pg.Surface([HealthParticle.RADIUS_MAX * 2, HealthParticle.RADIUS_MAX * 2], pg.SRCALPHA)],
+                         life_time)
+        self.radius = 0
+        self.max_radius = random.randint(HealthParticle.RADIUS_MIN, HealthParticle.RADIUS_MAX)
+        self.color = random.choice(HealthParticle.COLORS)
+
+    def update(self):
+        self.frame_counter += 1
+        if self.frame_counter > self.life_time:
+            self.kill()
+            return
+        age = self.frame_counter / self.life_time
+        if 0 < age < HealthParticle.FADE_ATTACK:
+            self.radius = self.max_radius * age / HealthParticle.FADE_ATTACK
+        elif HealthParticle.FADE_ATTACK <= age < 1 - HealthParticle.FADE_RELEASE:
+            self.radius = self.max_radius
+        else:
+            self.radius = self.max_radius * (1 - (age - (1 - HealthParticle.FADE_RELEASE)) / HealthParticle.FADE_RELEASE)
+        self.image.fill((0, 0, 0, 0))
+        pg.draw.circle(self.image, self.color, (HealthParticle.RADIUS_MAX, HealthParticle.RADIUS_MAX), self.radius)

@@ -287,3 +287,15 @@ class Player(AbilityEntity):
     def death_behavior(self):
         self.dead = True
         self.death_animation_counter = Player.DEATH_ANIMATION_LENGTH
+
+    def add_health(self, health):
+        self.health = min(self.health + health, self.max_health)
+        width = 48
+        height = 48
+        min_life = 60
+        max_life = 150
+        for x in range(50):
+            dx = random.randint(-width, width)
+            dy = random.randint(-height, health)
+            self.game_state.particles.add(HealthParticle(self.game_state.all_sprites, self.game_state, self.pos + Vector2(dx, dy),
+                                                         random.randint(min_life, max_life)))

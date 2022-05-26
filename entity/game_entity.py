@@ -85,6 +85,7 @@ class AbilityEntity(HealthEntity):
                 self.game_state.level_creator.place_movable_with_image(int((self.pos / self.game_state.tile_size).x),
                                                                        int((self.pos / self.game_state.tile_size).y),
                                                                        rooted_image)
+            self.game_state.player.add_health(20)
         self.kill()
 
 
