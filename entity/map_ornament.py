@@ -67,8 +67,7 @@ class Movable(Entity):
     SPEED = 1
 
     def __init__(self, group, game_state, pos):
-        super().__init__(group, game_state, pos, [pg.Surface([game_state.tile_size, game_state.tile_size])])
-        self.image.fill((255, 255, 0))
+        super().__init__(group, game_state, pos, [pg.transform.scale(pg.image.load('assets/map_ornament/movable/movable.png'), (64, 64))])
         self.moving = False
         self.moving_timer = 0
         self.collision_direction = Vector2(0, 0)
