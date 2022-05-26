@@ -43,8 +43,10 @@ class LevelCreator:
             for x in range(int(len(self.level[0]) / self.game_state.tile_dim[0])):
                 for tile_y in range(self.game_state.tile_dim[1]):
                     for tile_x in range(self.game_state.tile_dim[0]):
-                        tile = self.level[int(self.stage.y) * self.game_state.tile_dim[1] + tile_y][
-                            int(self.stage.x) * self.game_state.tile_dim[0] + tile_x]
+                        text_pos = (int(self.stage.y) * self.game_state.tile_dim[1] + tile_y,
+                            int(self.stage.x) * self.game_state.tile_dim[0] + tile_x)
+                        print(text_pos)
+                        tile = self.level[text_pos[0]][text_pos[1]]
                         if tile == "P":
                             stage_has_player = True
                             break
