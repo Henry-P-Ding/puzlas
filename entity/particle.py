@@ -71,6 +71,40 @@ class FireTrail(Particle):
         pg.draw.circle(self.image, self.color, (FireTrail.RADIUS_MAX, FireTrail.RADIUS_MAX), self.radius)
 
 
+class RootTrail(Particle):
+    LIFE_TIME = 12
+    RADIUS_MIN, RADIUS_MAX = 4, 8
+    COLORS = [
+        (22, 130, 176),
+        (73, 16, 210),
+        (255, 139, 255),
+        (255, 214, 255)
+    ]
+    FADE_ATTACK = 0.1
+    FADE_RELEASE = 0.3
+
+    def __init__(self, group, game_state, pos):
+        super().__init__(group, game_state, pos, [pg.Surface([RootTrail.RADIUS_MAX * 2, RootTrail.RADIUS_MAX * 2], pg.SRCALPHA)], RootTrail.LIFE_TIME)
+        self.radius = 0
+        self.max_radius = random.randint(RootTrail.RADIUS_MIN, RootTrail.RADIUS_MAX)
+        self.color = random.choice(RootTrail.COLORS)
+
+    def update(self):
+        self.frame_counter += 1
+        if self.frame_counter > self.life_time:
+            self.kill()
+            return
+        age = self.frame_counter / self.life_time
+        if 0 < age < RootTrail.FADE_ATTACK:
+            self.radius = self.max_radius * age / RootTrail.FADE_ATTACK
+        elif RootTrail.FADE_ATTACK <= age < 1 - RootTrail.FADE_RELEASE:
+            self.radius = self.max_radius
+        else:
+            self.radius = self.max_radius * (1 - (age - (1 - RootTrail.FADE_RELEASE)) / RootTrail.FADE_RELEASE)
+        self.image.fill((0, 0, 0, 0))
+        pg.draw.circle(self.image, self.color, (RootTrail.RADIUS_MAX, RootTrail.RADIUS_MAX), self.radius)
+
+
 class LavaParticle(Particle):
     LIFE_TIME = 90
     RADIUS_MIN, RADIUS_MAX = 4, 6

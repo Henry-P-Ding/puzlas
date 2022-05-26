@@ -6,7 +6,6 @@ from entity.game_entity import Entity
 
 
 class Enemy(AbilityEntity):
-    # TODO: animate enemy and implement enemy images
     """
     Generic enemies class that attacks player
     """
@@ -26,6 +25,7 @@ class Enemy(AbilityEntity):
         # wall hit box for movement
         self.wall_hit_box = pg.Rect(self.hit_box.x, self.hit_box.y + self.hit_box.height / 2,
                                     self.hit_box.width, self.hit_box.height)
+        self.facing_right = False
 
     def update(self):
         self.frame_counter += 1
@@ -167,44 +167,53 @@ class Pathfinder(Enemy):
                     break
 
 
-class Melee(Pathfinder):
+class ProjectileEnemy(Pathfinder):
     """
-    Melee enemy class that can attack the player within a certain melee range.
+    General projectile enemy class that has a projectile ability.
     """
-
-    def __init__(self, group, game_state, pos, speed, health, melee_range):
-        super().__init__(group, game_state, pos, None, speed, health, [pg.Surface((48, 64))])
-        # range of melee attacks in pixels
-        self.melee_range = melee_range
+    def __init__(self, group, game_state, pos, speed, health, range, ability, cooldown, images):
+        super().__init__(group, game_state, pos, ability, speed, health, images)
+        self.ability.cooldown = cooldown
+        self.range = range
+        self.firing = False
 
     def update(self):
         # path finds to the player
         self.path_find_to_player()
-
         # steer towards the nearest node if it can path to the player
         if len(self.pathing_nodes) > 0:
             self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
-                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.melee_range)
-        self.image.fill((100, 100, 100))
-
+                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
+        self.animate()
         if self.damaged:
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
+        else:
+            self.rooted = False
 
         self.move()
+        self.firing = False
         self.attack()
         self.frame_counter += 1
+        if self.vel.x > 0:
+            self.facing_right = True
+        elif self.vel.x < 0:
+            self.facing_right = False
         if self.health <= 0:
             self.death_behavior()
 
+    def activate_ability(self):
+        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
+
     def attack(self):
         """Attacks player within a certain range."""
-        if (self.pos - self.game_state.player.pos).magnitude_squared() < self.melee_range * self.melee_range:
-            pass
+        if not self.game_state.player is None and not self.game_state.player.dead and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
+            self.activate_ability()
+            self.firing = True
 
 
-class FireMage(Pathfinder):
+class FireMage(ProjectileEnemy):
     """
     Fire mage enemy class that can attack the player at range with a fireball ability.
     """
@@ -226,7 +235,8 @@ class FireMage(Pathfinder):
     }
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootFireball(self, attack_list, attack_list), speed, health,
+        super().__init__(group, game_state, pos, speed, health, range, ShootFireball(self, attack_list, attack_list),
+                         FireMage.ABILITY_COOLDOWN,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
                           [pg.image.load("assets/enemy/fire_mage/fire_mage_{0}.png".format(x)) for x in
                            ["0",
@@ -238,44 +248,6 @@ class FireMage(Pathfinder):
                             "6",
                             "7"
                             ]]])
-        # make enemy less OP
-        self.ability.cooldown = FireMage.ABILITY_COOLDOWN
-        self.range = range
-        self.facing_right = False
-        self.firing = False
-
-    def update(self):
-        # path finds to the player
-        self.path_find_to_player()
-        # steer towards the nearest node if it can path to the player
-        if len(self.pathing_nodes) > 0:
-            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
-                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.animate()
-        if self.damaged:
-            self.damage_source.damaging(self)
-            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
-                self.damaged = False
-        # TODO: fix enemy getting hooked
-        self.move()
-        self.firing = False
-        self.attack()
-        self.frame_counter += 1
-        if self.vel.x > 0:
-            self.facing_right = True
-        elif self.vel.x < 0:
-            self.facing_right = False
-        if self.health <= 0:
-            self.death_behavior()
-
-    def activate_ability(self):
-        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
-
-    def attack(self):
-        """Attacks player within a certain range."""
-        if not self.game_state.player is None and not self.game_state.player.dead and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
-            self.activate_ability()
-            self.firing = True
 
     def animate(self):
         """Animates player sprite."""
@@ -302,7 +274,7 @@ class FireMage(Pathfinder):
                 self.switch_image(pg.transform.flip(new_image, True, False))
 
 
-class RootMage(Pathfinder):
+class RootMage(ProjectileEnemy):
     """
     Root mage enemy class that can attack the player at range with a root ability.
     """
@@ -321,9 +293,10 @@ class RootMage(Pathfinder):
         "moving": 4,
         "firing": 0
     }
+    ABILITY_COOLDOWN = 240
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootRoot(self, attack_list, attack_list), speed, health,
+        super().__init__(group, game_state, pos, speed, health, range, ShootRoot(self, attack_list, attack_list), RootMage.ABILITY_COOLDOWN,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
                           [pg.image.load("assets/enemy/root_mage/root_mage_{0}.png".format(x)) for x in
                            ["0",
@@ -335,41 +308,6 @@ class RootMage(Pathfinder):
                             "6",
                             "7"
                             ]]])
-        self.range = range
-        self.facing_right = False
-        self.firing = False
-
-    def update(self):
-        # path finds to the player
-        self.path_find_to_player()
-        # steer towards the nearest node if it can path to the player
-        if len(self.pathing_nodes) > 0:
-            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
-                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.animate()
-        if self.damaged:
-            self.damage_source.damaging(self)
-            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
-                self.damaged = False
-        self.move()
-        self.firing = False
-        self.attack()
-        self.frame_counter += 1
-        if self.vel.x > 0:
-            self.facing_right = True
-        elif self.vel.x < 0:
-            self.facing_right = False
-        if self.health <= 0:
-            self.death_behavior()
-
-    def activate_ability(self):
-        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
-
-    def attack(self):
-        """Attacks player within a certain range."""
-        if self.game_state.player is not None and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
-            self.activate_ability()
-            self.firing = True
 
     def animate(self):
         """Animates player sprite."""
@@ -396,7 +334,7 @@ class RootMage(Pathfinder):
                 self.switch_image(pg.transform.flip(new_image, True, False))
 
 
-class HookMage(Pathfinder):
+class HookMage(ProjectileEnemy):
     """
     Hook mage enemy class that can attack the player at range with a hook ability.
     """
@@ -415,9 +353,10 @@ class HookMage(Pathfinder):
         "moving": 4,
         "firing": 0
     }
+    ABILITY_COOLDOWN = ShootHook.COOL_DOWN
 
     def __init__(self, group, game_state, pos, speed, health, range, attack_list):
-        super().__init__(group, game_state, pos, ShootHook(self, attack_list, attack_list), speed, health,
+        super().__init__(group, game_state, pos, speed, health, range, ShootHook(self, attack_list, attack_list), HookMage.ABILITY_COOLDOWN,
                          [pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4)) for image in
                           [pg.image.load("assets/enemy/hook_mage/hook_mage_{0}.png".format(x)) for x in
                            ["0",
@@ -429,41 +368,6 @@ class HookMage(Pathfinder):
                             "6",
                             "7"
                             ]]])
-        self.range = range
-        self.facing_right = False
-        self.firing = False
-
-    def update(self):
-        # path finds to the player
-        self.path_find_to_player()
-        # steer towards the nearest node if it can path to the player
-        if len(self.pathing_nodes) > 0:
-            self.steer(self.pathing_nodes[0] * self.game_state.tile_size +
-                       Vector2(self.game_state.tile_size / 2, self.game_state.tile_size / 2), min_dist=self.range)
-        self.animate()
-        if self.damaged:
-            self.damage_source.damaging(self)
-            if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
-                self.damaged = False
-        self.move()
-        self.firing = False
-        self.attack()
-        self.frame_counter += 1
-        if self.vel.x > 0:
-            self.facing_right = True
-        elif self.vel.x < 0:
-            self.facing_right = False
-        if self.health <= 0:
-            self.death_behavior()
-
-    def activate_ability(self):
-        self.ability.activate((self.game_state.player.pos - self.pos).normalize())
-
-    def attack(self):
-        """Attacks player within a certain range."""
-        if self.game_state.player is not None and (self.pos - self.game_state.player.pos).magnitude_squared() < self.range * self.range:
-            self.activate_ability()
-            self.firing = True
 
     def animate(self):
         """Animates player sprite."""

@@ -11,7 +11,6 @@ class Player(AbilityEntity):
     """
     Player-controlled game object class
     """
-    # TODO: create a settings file for constants
     SPEED = 8
     DISPLAY_SIZE = (60, 80)
     WALK_DUST_RATE = 4
@@ -21,6 +20,7 @@ class Player(AbilityEntity):
         "moving": 4,
         "slashing": 5
     }
+    CAMERA_SHAKE = 15
 
     def __init__(self, group, game_state):
         super().__init__(group=group,
@@ -60,11 +60,13 @@ class Player(AbilityEntity):
         # different walking animations
         self.facing_right = True
         # checks whether ability is active or not
-        self.ability_active = False
+        self.primary_ability_active = False
+        self.secondary_ability_active = False
         # melee slash
         self.slashing = False
         self.slash_counter = 0
         self.ability = None
+        self.secondary_ability = None
 
         # player health bar
         self.max_health = 100
@@ -106,6 +108,8 @@ class Player(AbilityEntity):
             self.damage_source.damaging(self)
             if self.frame_counter - self.damage_frame >= self.damage_source.damage_duration:
                 self.damaged = False
+        else:
+            self.rooted = False
         self.health_bar.change_indicator(self.health)
 
         # movement
@@ -202,8 +206,10 @@ class Player(AbilityEntity):
             self.game_state.particles.add(WalkDust(self.game_state.all_sprites, self.game_state, dust_pos))
 
         # activates player ability
-        if self.ability_active:
+        if self.primary_ability_active:
             self.ability.activate((self.game_state.mouse_pos - self.pos).normalize())
+        elif self.secondary_ability_active:
+            self.secondary_ability.activate((self.game_state.mouse_pos - self.pos).normalize())
 
         # animate player sprite
         self.frame_counter += 1
@@ -217,11 +223,7 @@ class Player(AbilityEntity):
         if self.health <= 0:
             self.death_behavior()
 
-        # tile_pos = Vector2(1, 1) + self.pos / self.game_state.tile_size + Vector2(self.game_state.level_creator.stage.x * self.game_state.tile_dim[0], self.game_state.level_creator.stage.y * self.game_state.tile_dim[1])
-        # print(int(tile_pos.x), int(tile_pos.y))
-
     def animate(self):
-        # TODO: remove hardcoded moduli and offsets
         """Animates player sprite."""
         if self.slashing:
             self.facing_right = (self.game_state.mouse_pos - self.pos).x > 0
@@ -280,8 +282,7 @@ class Player(AbilityEntity):
 
     def take_damage(self, damage_amount):
         self.health -= damage_amount
-        # TODO: remove hardcoded
-        self.game_state.shake_camera(15)
+        self.game_state.shake_camera(Player.CAMERA_SHAKE)
 
     def death_behavior(self):
         self.dead = True

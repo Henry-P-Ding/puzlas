@@ -155,7 +155,7 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        background_image = pg.image.load("assets/map/playing_state_map_1.png")
+        background_image = pg.image.load("assets/map/playing_state_map_0.png")
         self.background = pg.transform.scale(background_image,
                                              (background_image.get_width() * 4, background_image.get_height() * 4))
         self.on_camera_background = pg.Surface([self.shake_screen.get_width() + 2 * self.tile_size, self.shake_screen.get_height() + 2 * self.tile_size])
@@ -176,6 +176,12 @@ class PlayingState(GameState):
         self.walls = pg.sprite.Group()
         # movable objects
         self.movables = pg.sprite.Group()
+        # door objects
+        self.doors = pg.sprite.Group()
+        # lever objects
+        self.levers = pg.sprite.Group()
+        # arrow shooter objects
+        self.arrow_shooters = pg.sprite.Group()
         # enemy sprites
         self.enemies = pg.sprite.Group()
         # particle sprites
@@ -184,12 +190,14 @@ class PlayingState(GameState):
         self.controls = controls.PlayingControls(self.game)
 
         # example level
-        self.level_creator.create_level(self.level_creator.load_from_file('levels.txt'))
+        self.level = 0
+        self.level_creator.create_level(self.level_creator.load_from_file('level_0.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
+        self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
         # check if screen has been entirely updated after shaking
         self.post_shake_screen_update = False
-    
+
         # menu gui
         self.ability_indicator = IndicatorBar(self.gui_sprites, Vector2(16, 80), (64, 64), 
                                               [pg.image.load(f"assets/gui/ability_icon/{name}.png") for name in
@@ -234,6 +242,10 @@ class PlayingState(GameState):
         screen_bound = self.player.check_screen_bounds()
         if screen_bound is not None:
             self.level_creator.stage += screen_bound
+            if self.level_creator.stage == Vector2(0, 0) and self.level == 0:
+                self.level = 1
+                self.load_level(self.level)
+                return
             # remove all non-player objects to switch stage
             for sprite in self.all_sprites:
                 if not isinstance(sprite, Player):
@@ -243,8 +255,10 @@ class PlayingState(GameState):
                 self.player.pos.x = screen_bound.x % self.game.window_size[0]
             elif screen_bound.y != 0:
                 self.player.pos.y = screen_bound.y % self.game.window_size[1]
+            self.player.wall_hit_box.center = self.player.pos.x, self.player.pos.y + self.player.hit_box.height / 4
+            self.player.hit_box.center = self.player.pos.x, self.player.pos.y
             # populates game with new sprites from the new stage
-            self.level_creator.create_level(self.level_creator.level)
+            self.level_creator.load_stage()
             # draws new background
             self.on_camera_background.fill(self.void_color)
             self.on_camera_background.blit(self.background, (0, 0),
@@ -258,7 +272,6 @@ class PlayingState(GameState):
             pg.display.update(rect)
 
         # reset camera shake
-        # TODO: remove hardcoded envelope values
         if self.shake_timer != 0:
             phase_factor = Vector2(math.sin(2 * math.pi / PlayingState.SCREEN_SHAKE_PERIOD * self.shake_timer),
                                    math.sin(2 * math.pi / PlayingState.SCREEN_SHAKE_PERIOD * (self.shake_timer + random.random() * PlayingState.SCREEN_SHAKE_PERIOD)))
@@ -306,6 +319,31 @@ class PlayingState(GameState):
             self.pre_shake_pos = self.camera_pos.copy()
         self.shake_timer = time
         self.shake_timer_max = time
+
+    def load_level(self, level):
+        background_image = pg.image.load(f"assets/map/playing_state_map_{level}.png")
+        self.background = pg.transform.scale(background_image,
+                                             (background_image.get_width() * 4, background_image.get_height() * 4))
+        self.level_creator.create_level(self.level_creator.load_from_file(f'level_{level}.txt'))
+        self.level_creator.load_stage()
+        self.on_camera_background.fill(self.void_color)
+        self.on_camera_background.blit(self.background, (0, 0),
+                                       (int(self.level_creator.stage.x * self.tile_dim[0] - 1) * self.tile_size,
+                                        int(self.level_creator.stage.y * self.tile_dim[1] - 1) * self.tile_size,
+                                        (int(self.level_creator.stage.x + 1) * self.tile_dim[0] + 2) * self.tile_size,
+                                        (int(self.level_creator.stage.y + 1) * self.tile_dim[1] + 2) * self.tile_size))
+        self.shake_screen.blit(self.on_camera_background, (-self.tile_size, -self.tile_size))
+        self.game.screen.fill(self.void_color)
+        rect = self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
+        pg.display.update(rect)
+        if level == 1:
+            self.player.pos = Vector2(200, 200)
+            self.camera_pos = Vector2(0, 0)
+        for sprite in self.all_sprites.sprites():
+            if not sprite in self.player_group.sprites():
+                sprite.kill()
+
+
 
 
 class SelectionMenu(GameState):
@@ -388,7 +426,8 @@ class StartMenu(SelectionMenu):
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
         self.level_creator = LevelCreator(self, Vector2(1, 1))
-        self.level_creator.create_level(self.level_creator.load_from_file('start_menu_level.txt'))
+        self.level_creator.level = self.level_creator.load_from_file('start_menu_level.txt')
+        self.level_creator.load_stage()
 
     def update(self):
         """Update step in game state loop."""
@@ -508,11 +547,10 @@ class GameOverMenu(SelectionMenu):
         pg.display.update(self.background.get_rect())
         self.selections = [
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2), lambda: self.reset_game(),
-                            [pg.transform.scale(image, (528, 96)) for image in
                              [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
                               ["0",
                                "1"
-                               ]]])
+                               ]])
         ]
 
     def reset_game(self):

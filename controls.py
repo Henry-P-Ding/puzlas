@@ -47,7 +47,8 @@ class PlayingControls(Controls):
             pg.K_d: lambda: self.set_pressed_map(pg.K_d, True),
             pg.K_a: lambda: self.set_pressed_map(pg.K_a, True),
             pg.K_w: lambda: self.set_pressed_map(pg.K_w, True),
-            pg.K_s: lambda: self.set_pressed_map(pg.K_s, True)
+            pg.K_s: lambda: self.set_pressed_map(pg.K_s, True),
+            pg.K_SPACE: lambda: self.flip_lever()
         }
         self.event_maps["key_up"] = {
             pg.K_d: lambda: self.set_pressed_map(pg.K_d, False),
@@ -57,11 +58,21 @@ class PlayingControls(Controls):
             pg.K_ESCAPE: lambda: self.game.game_state_manager.enter_state_from_pool("pause_menu")
         }
         self.event_maps["mouse_down"] = {
-            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_ability_active(True)
+            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_primary_ability_active(True),
+            pg.BUTTON_RIGHT: lambda: self.game.game_state_manager.current_state().player.set_secondary_ability_active(True)
         }
         self.event_maps["mouse_up"] = {
-            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_ability_active(False)
+            pg.BUTTON_LEFT: lambda: self.game.game_state_manager.current_state().player.set_primary_ability_active(False),
+            pg.BUTTON_RIGHT: lambda: self.game.game_state_manager.current_state().player.set_secondary_ability_active(False)
         }
+
+    def flip_lever(self):
+        game_state = self.game.game_state_manager.current_state()
+        min_sq_d = game_state.tile_size * game_state.tile_size
+        for lever in game_state.levers.sprites():
+            if (game_state.player.pos - lever.pos).magnitude_squared() < min_sq_d:
+                lever.activated = not lever.activated
+                break
 
     def set_pressed_map(self, key, val):
         self.key_presses[key] = val
