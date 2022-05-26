@@ -190,6 +190,7 @@ class PlayingState(GameState):
         self.controls = controls.PlayingControls(self.game)
 
         # example level
+        self.level = 0
         self.level_creator.create_level(self.level_creator.load_from_file('level_0.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
         self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
@@ -241,6 +242,10 @@ class PlayingState(GameState):
         screen_bound = self.player.check_screen_bounds()
         if screen_bound is not None:
             self.level_creator.stage += screen_bound
+            if self.level_creator.stage == Vector2(0, 0) and self.level == 0:
+                self.level = 1
+                self.load_level(self.level)
+                return
             # remove all non-player objects to switch stage
             for sprite in self.all_sprites:
                 if not isinstance(sprite, Player):
@@ -314,6 +319,31 @@ class PlayingState(GameState):
             self.pre_shake_pos = self.camera_pos.copy()
         self.shake_timer = time
         self.shake_timer_max = time
+
+    def load_level(self, level):
+        background_image = pg.image.load(f"assets/map/playing_state_map_{level}.png")
+        self.background = pg.transform.scale(background_image,
+                                             (background_image.get_width() * 4, background_image.get_height() * 4))
+        self.level_creator.create_level(self.level_creator.load_from_file(f'level_{level}.txt'))
+        self.level_creator.load_stage()
+        self.on_camera_background.fill(self.void_color)
+        self.on_camera_background.blit(self.background, (0, 0),
+                                       (int(self.level_creator.stage.x * self.tile_dim[0] - 1) * self.tile_size,
+                                        int(self.level_creator.stage.y * self.tile_dim[1] - 1) * self.tile_size,
+                                        (int(self.level_creator.stage.x + 1) * self.tile_dim[0] + 2) * self.tile_size,
+                                        (int(self.level_creator.stage.y + 1) * self.tile_dim[1] + 2) * self.tile_size))
+        self.shake_screen.blit(self.on_camera_background, (-self.tile_size, -self.tile_size))
+        self.game.screen.fill(self.void_color)
+        rect = self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
+        pg.display.update(rect)
+        if level == 1:
+            self.player.pos = Vector2(200, 200)
+            self.camera_pos = Vector2(0, 0)
+        for sprite in self.all_sprites.sprites():
+            if not sprite in self.player_group.sprites():
+                sprite.kill()
+
+
 
 
 class SelectionMenu(GameState):
