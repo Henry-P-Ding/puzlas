@@ -155,7 +155,7 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        background_image = pg.image.load("assets/map/playing_state_map_1.png")
+        background_image = pg.image.load("assets/map/playing_state_map_0.png")
         self.background = pg.transform.scale(background_image,
                                              (background_image.get_width() * 4, background_image.get_height() * 4))
         self.on_camera_background = pg.Surface([self.shake_screen.get_width() + 2 * self.tile_size, self.shake_screen.get_height() + 2 * self.tile_size])
@@ -267,7 +267,6 @@ class PlayingState(GameState):
             pg.display.update(rect)
 
         # reset camera shake
-        # TODO: remove hardcoded envelope values
         if self.shake_timer != 0:
             phase_factor = Vector2(math.sin(2 * math.pi / PlayingState.SCREEN_SHAKE_PERIOD * self.shake_timer),
                                    math.sin(2 * math.pi / PlayingState.SCREEN_SHAKE_PERIOD * (self.shake_timer + random.random() * PlayingState.SCREEN_SHAKE_PERIOD)))
@@ -518,11 +517,10 @@ class GameOverMenu(SelectionMenu):
         pg.display.update(self.background.get_rect())
         self.selections = [
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2), lambda: self.reset_game(),
-                            [pg.transform.scale(image, (528, 96)) for image in
                              [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
                               ["0",
                                "1"
-                               ]]])
+                               ]])
         ]
 
     def reset_game(self):

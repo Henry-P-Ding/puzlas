@@ -15,7 +15,7 @@
 #               #
 #               #
 #       H       #
-#               #
+#         P     #
 #               #
 #               #
 #               #
@@ -35,11 +35,11 @@
 ############  ###
 #               #
 #   V           #
-#               #
+#     V         #
 #               #
 #           L   #
 #               #
-# V             #
+# V    V        #
 #               #
 ############  ###
 ############  ###
@@ -72,7 +72,7 @@
 #      F        #
 #               #
 #               #
-#       P       #
+#               #
 #               #
 #################
 ~
@@ -82,11 +82,11 @@ door;8,55;9,56;enemy_dead
 door;12,33;13,34;lever;12,39
 door;12,22;13,23;lever;12,28
 door;3,11;4,12;enemy_dead
-gun;1,37;True;False;100;80;1,0;lever;12,39
-gun;1,38;True;False;100;80;1,0;lever;12,39
-gun;1,39;True;False;100;80;1,0;lever;12,39
-gun;1,40;True;False;100;80;1,0;lever;12,39
-gun;1,26;True;False;100;80;1,0;lever;12,28
-gun;1,27;True;False;100;80;1,0;lever;12,28
-gun;1,28;True;False;100;80;1,0;lever;12,28
-gun;1,29;True;False;100;80;1,0;lever;12,28
+gun;1,37;True;False;100;60;1,0;lever;12,39
+gun;1,38;True;False;100;60;1,0;lever;12,39
+gun;1,39;True;False;100;60;1,0;lever;12,39
+gun;1,40;True;False;100;60;1,0;lever;12,39
+gun;1,26;True;False;100;60;1,0;lever;12,28
+gun;1,27;True;False;100;60;1,0;lever;12,28
+gun;1,28;True;False;100;60;1,0;lever;12,28
+gun;1,29;True;False;100;60;1,0;lever;12,28

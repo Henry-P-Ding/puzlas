@@ -184,9 +184,9 @@ class LevelCreator:
         door = Door(group=self.game_state.all_sprites,
                     game_state=self.game_state,
                     pos1=Vector2((tile_x1 + 0.5) * self.game_state.tile_size,
-                                 (tile_y1 + 0.5) * self.game_state.tile_size),
+                                 (tile_y1) * self.game_state.tile_size),
                     pos2=Vector2((tile_x2 + 0.5) * self.game_state.tile_size,
-                                 (tile_y2 + 0.5) * self.game_state.tile_size),
+                                 (tile_y2) * self.game_state.tile_size),
                     activation_condition=activation_condition)
         self.game_state.doors.add(door)
 
@@ -247,7 +247,7 @@ class LevelCreator:
                                                          (2 * tile_y + 1) / 2 * self.game_state.tile_size),
                                              speed=1.2,
                                              health=50,
-                                             range=200,
+                                             range=400,
                                              attack_list=[self.game_state.walls, self.game_state.player_group]))
 
     def place_hook_mage(self, tile_x, tile_y):

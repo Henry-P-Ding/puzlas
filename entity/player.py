@@ -11,7 +11,6 @@ class Player(AbilityEntity):
     """
     Player-controlled game object class
     """
-    # TODO: create a settings file for constants
     SPEED = 8
     DISPLAY_SIZE = (60, 80)
     WALK_DUST_RATE = 4
@@ -21,6 +20,7 @@ class Player(AbilityEntity):
         "moving": 4,
         "slashing": 5
     }
+    CAMERA_SHAKE = 15
 
     def __init__(self, group, game_state):
         super().__init__(group=group,
@@ -224,7 +224,6 @@ class Player(AbilityEntity):
             self.death_behavior()
 
     def animate(self):
-        # TODO: remove hardcoded moduli and offsets
         """Animates player sprite."""
         if self.slashing:
             self.facing_right = (self.game_state.mouse_pos - self.pos).x > 0
@@ -283,8 +282,7 @@ class Player(AbilityEntity):
 
     def take_damage(self, damage_amount):
         self.health -= damage_amount
-        # TODO: remove hardcoded
-        self.game_state.shake_camera(15)
+        self.game_state.shake_camera(Player.CAMERA_SHAKE)
 
     def death_behavior(self):
         self.dead = True

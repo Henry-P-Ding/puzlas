@@ -2,7 +2,6 @@ import pygame as pg
 
 
 class Button(pg.sprite.Sprite):
-    # TODO: change to image instead of text
     """Button class with a text image and associated function that is executed on demand."""
     def __init__(self, group, game_state, pos, function, images):
         super().__init__(group)

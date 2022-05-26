@@ -35,7 +35,7 @@ class MeleeAttack(DamageSource):
         return False
 
     def __init__(self, group, game_state, pos, damage, range, dir, spread, duration, kill_list, damage_list):
-        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, [pg.Surface((1, 1))])
+        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, [pg.Surface((1, 1))], "melee_attack")
         # melee attack has no image, the player changes to a slashing animation instead
         self.image = pg.Surface((1, 1), pg.SRCALPHA)
         # filled image with a transparent color
@@ -83,8 +83,8 @@ class Projectile(DamageSource):
     Projectile damage source, used for flying objects
     """
 
-    def __init__(self, group, game_state, pos, vel, damage, duration, kill_list, damage_list, images):
-        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, images)
+    def __init__(self, group, game_state, pos, vel, damage, duration, kill_list, damage_list, images, name):
+        super().__init__(group, game_state, pos, damage, duration, kill_list, damage_list, images, name)
         # movement speed
         self.vel = vel
         # image of projectile
@@ -143,7 +143,7 @@ class Fireball(Projectile):
                             "1",
                             "2",
                             "3"
-                            ]]])
+                            ]]], "fireball")
         self.hit_box.size = 16, 16
         self.burn_counter = 0
 
@@ -199,15 +199,17 @@ class Root(Projectile):
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
         super().__init__(group, game_state, pos, vel, damage, Root.DURATION, kill_list, damage_list,
                         [pg.transform.scale(image, (100, 100)) for image in
-                        [pg.image.load("assets/ability/Root/{0}.png".format(x)) for x in range (1,31)]])
+                        [pg.image.load("assets/ability/Root/{0}.png".format(x)) for x in range (1,31)]], "root")
         self.hit_box.size = 32,32
-        # TODO: add names to all damage sources
-        self.name = "root"
 
     def animate(self):
         """Animates fireball sprite."""
         self.switch_image(self.images[(self.frame_counter // Root.ANIMATION_SPEED) % Root.ANIMATION_MODULUS])
         self.image = pg.transform.rotate(self.image, -self.angle * 180 / math.pi )
+        if self.frame_counter % Root.PARTICLE_TRAIL_RATE == 0:
+            trail_pos = self.pos - self.hit_box.width * 3 * Vector2(math.cos(self.angle), math.sin(self.angle)) + Vector2(random.random() * self.hit_box.width - self.hit_box.width / 2,
+                                                                                                      random.random() * self.hit_box.height - self.hit_box.height / 2)
+            self.game_state.particles.add(RootTrail(self.game_state.all_sprites, self.game_state, trail_pos))
 
     def on_damage(self, entity):
         self.damage_flash(entity, Root.DAMAGE_FLASH_COLOR)
@@ -245,7 +247,7 @@ class Hook(Projectile):
     def __init__(self, group, game_state, pos, vel, damage, kill_list, damage_list):
         super().__init__(group, game_state, pos, vel, damage, Hook.DURATION, kill_list, damage_list, 
                          [pg.transform.scale(image, (36, 84)) for image in
-                          [pg.image.load("assets/ability/hook/weapon_axe.png")]])
+                          [pg.image.load("assets/ability/hook/weapon_axe.png")]], "hook")
         self.hit_box.size = 16, 16
         self.rotation_speed = Hook.ROTATION_SPEED
 
@@ -349,8 +351,9 @@ class ShootFireball(Ability):
 class ShootRoot(Ability):
     MAX_ROOTS = 3
     ROOT_SPEED = 3
-    COOL_DOWN = 240
+    COOL_DOWN = 60
     DAMAGE = 34
+    SHAKE_TIME = 3
 
     def __init__(self, sprite, kill_list, damage_list):
         super().__init__(sprite, ShootRoot.COOL_DOWN, kill_list, damage_list)
@@ -366,6 +369,8 @@ class ShootRoot(Ability):
                 self.roots.remove(root)
 
     def shoot(self, dir):
+        if self.sprite in self.sprite.game_state.player_group.sprites():
+            self.sprite.game_state.shake_camera(ShootRoot.SHAKE_TIME)
         self.roots.append(Root(group=self.sprite.game_state.all_sprites,
                                game_state=self.sprite.game_state,
                                pos=Vector2(self.sprite.pos.x, self.sprite.pos.y),
@@ -384,7 +389,6 @@ class ShootHook(Ability):
     COOL_DOWN = 90
     DAMAGE = 25
 
-    # TODO: create global settings for hook ability
     def __init__(self, sprite, kill_list, damage_list):
         super().__init__(sprite, ShootHook.COOL_DOWN, kill_list, damage_list)
         self.hooks = []

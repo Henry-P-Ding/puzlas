@@ -102,8 +102,11 @@ class Door(Entity):
     ANIMATION_LENGTH = 30
 
     def __init__(self, group, game_state, pos1, pos2, activation_condition):
-        super().__init__(group, game_state, (pos1+pos2)/2, [pg.Surface([abs(pos2.x - pos1.x + game_state.tile_size), abs(pos2.y - pos1.y + game_state.tile_size)], pg.SRCALPHA), pg.Surface([1, 1], pg.SRCALPHA)])
-        self.image.fill((255, 255, 0, 255))
+        super().__init__(group, game_state, (pos1+pos2)/2,
+                         [
+                             pg.transform.scale(pg.image.load("assets/map_ornament/door/door_0.png"), (256, 192)),
+                             pg.transform.scale(pg.image.load("assets/map_ornament/door/door_1.png"), (256, 192))
+                         ])
         self.open = False
         self.interacting = False
         self.interact_timer = 0
@@ -206,10 +209,10 @@ class ActivationCondition:
 
 class Lever(Entity):
     def __init__(self, group, game_state, pos):
-        super().__init__(group, game_state, pos, [pg.Surface([game_state.tile_size, game_state.tile_size]),
-                                                  pg.Surface([game_state.tile_size, game_state.tile_size])])
-        self.images[0].fill((0, 255, 255))
-        self.images[1].fill((255, 0, 255))
+        super().__init__(group, game_state, pos, [
+            pg.transform.scale(pg.image.load('assets/map_ornament/lever/lever_0.png'), (64, 64)),
+            pg.transform.scale(pg.image.load('assets/map_ornament/lever/lever_1.png'), (64, 64)),
+        ])
         self.hit_box.height = self.hit_box.height / 2
         self.hit_box.top = self.pos.y
         self.activated = False
@@ -227,7 +230,7 @@ class Lever(Entity):
 
 
 class ArrowGun(Entity):
-    FIRING_DELAY = 60
+    FIRING_DELAY = 15
 
     def __init__(self, group, game_state, pos, damage, speed, dir, constant_firing, aiming, activation_condition):
         super().__init__(group, game_state, pos, [pg.Surface([1, 1])])
@@ -287,8 +290,8 @@ class Spike(DamageSource):
                             "1",
                             "2",
                             "3"
-                            ]]]
-                         )
+                            ]]],
+                         "spike")
         self.spike_up = False
         self.pos.y -= self.game_state.tile_size
         self.animation_counter = 0

@@ -92,12 +92,12 @@ class DamageSource(Entity):
     """Base class for all game entities that do damage."""
     DAMAGE_FLASH_ALPHA = 200
 
-    def __init__(self, group, game_state, pos, damage, duration, kill_list, damage_list, images):
+    def __init__(self, group, game_state, pos, damage, duration, kill_list, damage_list, images, name):
         super().__init__(group, game_state, pos, images)
         # numerical damage value
         self.damage = damage
         # duration that other entities are considered in damage state
-        self.name = None
+        self.name = name
         self.damage_duration = duration
         self.kill_list = kill_list
         self.damage_list = damage_list
