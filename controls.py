@@ -142,3 +142,25 @@ class GameOverMenuControls(Controls):
 
     def set_click_map(self, button, value):
         self.mouse_downs[button] = value
+
+
+class GameWinMenuControls(Controls):
+    def __init__(self, game):
+        super().__init__(game)
+        self.mouse_downs = {
+            pg.BUTTON_LEFT: False,
+            pg.BUTTON_RIGHT: False
+        }
+        self.event_maps["mouse_down"] = {
+            pg.BUTTON_LEFT: lambda: self.set_click_map(pg.BUTTON_LEFT, True)
+        }
+        self.event_maps["mouse_up"] = {
+            pg.BUTTON_LEFT: lambda: self.activate_selection(pg.BUTTON_LEFT, False)
+        }
+
+    def activate_selection(self, button, value):
+        self.set_click_map(button, value)
+        self.game.game_state_manager.current_state().activate_selection()
+
+    def set_click_map(self, button, value):
+        self.mouse_downs[button] = value

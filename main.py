@@ -19,7 +19,8 @@ class Game:
         self.game_state_manager = GameStateManager(self, StartMenu(self, "start_menu"), {
             "playing": PlayingState(self, "playing"),
             "pause_menu": PauseMenu(self, "pause_menu"),
-            "quit_to_menu": GameOverMenu(self, "game_over")
+            "quit_to_menu": GameOverMenu(self, "game_over"),
+            "game_win": GameWinMenu(self, "game_win")
         })
 
     def start(self):

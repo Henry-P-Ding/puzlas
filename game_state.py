@@ -190,7 +190,7 @@ class PlayingState(GameState):
         self.controls = controls.PlayingControls(self.game)
 
         # example level
-        self.level = 0
+        self.level = 1
         self.level_creator.create_level(self.level_creator.load_from_file('level_1.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
         self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
@@ -239,6 +239,9 @@ class PlayingState(GameState):
             raise ValueError("Player ability is not valid.")
 
         # check if game needs to switch stage
+        if self.level == 1 and self.level_creator.stage == Vector2(1, 3) and (self.player.pos - Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2)).length_squared() < 100 * 100:
+            self.game.game_state_manager.switch_state_from_pool("game_win")
+
         screen_bound = self.player.check_screen_bounds()
         if screen_bound is not None:
             self.level_creator.stage += screen_bound
@@ -420,9 +423,7 @@ class StartMenu(SelectionMenu):
         self.selections = [
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 4/8), lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
                             [pg.image.load(f"assets/gui/button/play/play_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 5/8), lambda: print("opening options"),
-                            [pg.image.load(f"assets/gui/button/options/options_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 6/8), lambda: self.game.stop(),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 5/8), lambda: self.game.stop(),
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
         self.level_creator = LevelCreator(self, Vector2(1, 1))
@@ -512,10 +513,7 @@ class PauseMenu(SelectionMenu):
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 220),
                             lambda: self.game.game_state_manager.switch_state_from_pool("playing"),
                             [pg.image.load(f"assets/gui/button/resume_game/resume_game_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 316),
-                            lambda: print("opening options"),
-                            [pg.image.load(f"assets/gui/button/options/options_{x}.png") for x in ["0", "1"]]),
-            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 412),
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, 326),
                             lambda: self.quit_to_menu(),
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
@@ -526,7 +524,6 @@ class PauseMenu(SelectionMenu):
 
 
 class GameOverMenu(SelectionMenu):
-
     def __init__(self, game, name):
         super().__init__(game, name)
         # sets controls
@@ -547,6 +544,40 @@ class GameOverMenu(SelectionMenu):
         pg.display.update(self.background.get_rect())
         self.selections = [
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2), lambda: self.reset_game(),
+                             [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
+                              ["0",
+                               "1"
+                               ]])
+        ]
+
+    def reset_game(self):
+        self.game.game_state_manager.exit_state()
+        del self.game.game_state_manager.pool["playing"]
+        self.game.game_state_manager.pool["playing"] = PlayingState(self.game, "playing")
+        self.game.game_state_manager.enter_state_from_pool("start_menu")
+
+
+class GameWinMenu(SelectionMenu):
+    def __init__(self, game, name):
+        super().__init__(game, name)
+        # sets controls
+        self.controls = None
+        self.box = None
+
+    def load(self):
+        self.controls = controls.GameWinMenuControls(self.game)
+        self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        self.background.blit(self.game.screen, (0, 0))
+        tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
+        tint.fill((0, 0, 0))
+        tint.set_alpha(200)
+        self.background.blit(tint, (0, 0))
+        self.box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
+                       pg.image.load(f"assets/gui/menu/game_win_menu/game_win_menu.png"))
+        self.game.screen.blit(self.background, (0, 0))
+        pg.display.update(self.background.get_rect())
+        self.selections = [
+            ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] * 18 / 25), lambda: self.reset_game(),
                              [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
                               ["0",
                                "1"
