@@ -15,7 +15,7 @@ class Game:
         # game state: game is running
         self.running = False
 
-        # game states
+        # game states manager to switch between states
         self.game_state_manager = GameStateManager(self, StartMenu(self, "start_menu"), {
             "playing": PlayingState(self, "playing"),
             "pause_menu": PauseMenu(self, "pause_menu"),
@@ -45,6 +45,8 @@ class Game:
         pass
 
 
+# start game
 pg.init()
+# instanitate game vvariable
 game = Game((1088, 704), 60)
 game.start()

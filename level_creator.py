@@ -12,6 +12,7 @@ class LevelCreator:
 
     def __init__(self, game_state, stage):
         self.game_state = game_state
+        # string containing level data
         self.level = None
         # a specific subsection within the level that the player engages in
         self.stage = stage
@@ -29,6 +30,7 @@ class LevelCreator:
             "V": self.place_movable,
             "L": self.place_lever
         }
+        # information for placing doors and levers
         self.stage_function_information = {}
 
     def create_level(self, level_data):
@@ -38,25 +40,30 @@ class LevelCreator:
         """
         self.level = level_data
         stage_has_player = False
+        # loops to game tiles
         while not stage_has_player:
             self.stage.x = 0
             for x in range(int(len(self.level[0]) / self.game_state.tile_dim[0])):
                 for tile_y in range(self.game_state.tile_dim[1]):
                     for tile_x in range(self.game_state.tile_dim[0]):
+                        # text position
                         text_pos = (int(self.stage.y) * self.game_state.tile_dim[1] + tile_y,
                             int(self.stage.x) * self.game_state.tile_dim[0] + tile_x)
-                        print(text_pos)
                         tile = self.level[text_pos[0]][text_pos[1]]
+                        # set stage to wherever player is in the text file
                         if tile == "P":
                             stage_has_player = True
                             break
                 if stage_has_player:
                     break
+                # added stage vector to move stages
                 self.stage += Vector2(1, 0)
             if stage_has_player:
                 break
+            # add stage vector to move stages
             self.stage += Vector2(0, 1)
 
+        # whether the game is currenty reading level functions, which appear at end of file
         reading_level_functions = False
         for line in self.level:
             if line[0] == "~":
@@ -72,6 +79,7 @@ class LevelCreator:
                 if tokens[0] == "door":
                     pos1_split, pos2_split = tokens[1].split(","), tokens[2].split(",")
                     pos1, pos2 = Vector2(int(pos1_split[0]), int(pos1_split[1])), Vector2(int(pos2_split[0]), int(pos2_split[1]))
+                    # id of whatever condition the door needs to activate
                     activation_condition_id = tokens[3]
                     if len(tokens) > 3:
                         activation_condition = ActivationCondition(activation_condition_id, tokens[4:])
@@ -150,6 +158,7 @@ class LevelCreator:
                                                    tile_y * self.game_state.tile_size)))
 
     def place_fountain(self, tile_x, tile_y):
+        """Places fountain"""
         tile = self.level[int(self.stage.y) * self.game_state.tile_dim[1] + tile_y][
             int(self.stage.x) * self.game_state.tile_dim[0] + tile_x]
         fountain = Fountain(group=self.game_state.all_sprites,
@@ -160,6 +169,7 @@ class LevelCreator:
         self.game_state.walls.add(fountain)
 
     def place_spike(self, tile_x, tile_y):
+        """Places spike into the game"""
         spike = Spike(group=self.game_state.all_sprites,
                       game_state=self.game_state,
                       pos=Vector2(tile_x * self.game_state.tile_size, tile_y * self.game_state.tile_size),
@@ -168,6 +178,7 @@ class LevelCreator:
         self.game_state.map_ornaments.add(spike)
 
     def place_movable(self, tile_x, tile_y):
+        """Places movable block by player"""
         movable = Movable(group=self.game_state.all_sprites,
                           game_state=self.game_state,
                           pos=Vector2((tile_x + 0.5) * self.game_state.tile_size,
@@ -175,6 +186,7 @@ class LevelCreator:
         self.game_state.movables.add(movable)
 
     def place_movable_with_image(self, tile_x, tile_y, image):
+        """Places movable block by player"""
         movable = Movable(group=self.game_state.all_sprites,
                           game_state=self.game_state,
                           pos=Vector2((tile_x + 0.5) * self.game_state.tile_size,
@@ -183,6 +195,7 @@ class LevelCreator:
         self.game_state.movables.add(movable)
 
     def place_door(self, tile_x1, tile_y1, tile_x2, tile_y2, activation_condition):
+        """Places door"""
         door = Door(group=self.game_state.all_sprites,
                     game_state=self.game_state,
                     pos1=Vector2((tile_x1 + 0.5) * self.game_state.tile_size,
@@ -193,6 +206,7 @@ class LevelCreator:
         self.game_state.doors.add(door)
 
     def place_arrow_gun(self, tile_x, tile_y, damage, speed, dir, constant_firing, aiming, activation_condition):
+        """Places arrow gun"""
         shooter = ArrowGun(group=self.game_state.all_sprites,
                            game_state=self.game_state,
                            pos=Vector2((tile_x + 0.5) * self.game_state.tile_size,
@@ -206,6 +220,7 @@ class LevelCreator:
         self.game_state.arrow_shooters.add(shooter)
 
     def place_lever(self, tile_x, tile_y):
+        """Places lever"""
         lever = Lever(group=self.game_state.all_sprites,
                       game_state=self.game_state,
                       pos=Vector2((tile_x + 0.5) * self.game_state.tile_size,

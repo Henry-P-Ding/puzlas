@@ -27,6 +27,7 @@ class TextButton(Button):
 
 
 class ClickableButton(Button):
+    # how the image is changed when mouse hovers over it
     HOVER_ALPHA = 50
 
     def __init__(self, group, game_state, pos, function, images, default_index=0, selected_index=1,):
@@ -37,6 +38,7 @@ class ClickableButton(Button):
         self.prev_selected = self.selected
 
     def update(self):
+        """update the GUI position"""
         mouse_pos = self.game_state.mouse_pos
         if self.rect.left < mouse_pos[0] < self.rect.right and self.rect.top < mouse_pos[1] < self.rect.bottom:
             if self.game_state.controls.mouse_downs[pg.BUTTON_LEFT]:
@@ -61,6 +63,7 @@ class ClickableButton(Button):
 
 
 class Box(pg.sprite.Sprite):
+    """Box with basic image as a solid background for the GUI elements."""
     def __init__(self, game_state, group, pos, image):
         super().__init__(group)
         self.game_state = game_state
@@ -71,6 +74,7 @@ class Box(pg.sprite.Sprite):
 
 
 class FractionalBar(pg.sprite.Sprite):
+    """Fracitional bar based on some quantity, such as to display health"""
     def __init__(self, group, pos, size, border_width, indicator, indicator_max, bar_color, background_color, border_color, left_centered=True):
         super().__init__(group)
         # left size of the bar
@@ -95,16 +99,19 @@ class FractionalBar(pg.sprite.Sprite):
             self.rect.midright = self.pos
 
     def update(self):
+        # update width of the fractional bar
         self.bar_rect.width = self.indicator / self.indicator_max * self.size.x
         self.image.fill(self.background_color)
         pg.draw.rect(self.image, self.bar_color, self.bar_rect)
         pg.draw.lines(self.image, self.border_color, True, self.border_corners, 2 * self.border_width + 1)
 
     def change_indicator(self, value):
+        # changes the value of the fractional bar
         self.indicator = value
 
 
 class IndicatorBar(pg.sprite.Sprite):
+    """Indicator bar that indicators different states in the game."""
     def __init__(self, group, pos, size, images, left_centered=True, top_centered=True):
         super().__init__(group)
         # left size of the bar
