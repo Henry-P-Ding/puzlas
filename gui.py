@@ -118,6 +118,7 @@ class IndicatorBar(pg.sprite.Sprite):
         self.pos = pos
         self.size = size
         self.images = []
+        # images in images - adds to images
         for image in images:
             self.images.append(pg.transform.scale(image, size))
         self.image = self.images[0]

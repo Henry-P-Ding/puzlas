@@ -2,6 +2,7 @@ import pygame as pg
 
 
 class Controls:
+    """General control calss that handles mosue and key events"""
     def __init__(self, game):
         self.game = game
         self.event_maps = {
@@ -35,6 +36,7 @@ class Controls:
 
 
 class PlayingControls(Controls):
+    """Placing menu controls"""
     def __init__(self, game):
         super().__init__(game)
         self.key_presses = {
@@ -67,6 +69,7 @@ class PlayingControls(Controls):
         }
 
     def flip_lever(self):
+        # adds controls for flipping levers
         game_state = self.game.game_state_manager.current_state()
         min_sq_d = game_state.tile_size * game_state.tile_size
         for lever in game_state.levers.sprites():
@@ -75,10 +78,12 @@ class PlayingControls(Controls):
                 break
 
     def set_pressed_map(self, key, val):
+        # adds key press map
         self.key_presses[key] = val
 
 
 class StartMenuControls(Controls):
+    """Start menu controls."""
     def __init__(self, game):
         super().__init__(game)
         self.mouse_downs = {
@@ -93,6 +98,7 @@ class StartMenuControls(Controls):
         }
 
     def activate_selection(self, button, value):
+        # activates any buttons
         self.set_click_map(button, value)
         self.game.game_state_manager.current_state().activate_selection()
 
@@ -101,6 +107,7 @@ class StartMenuControls(Controls):
 
 
 class PauseMenuControls(Controls):
+    """Pause menu controls."""
     def __init__(self, game):
         super().__init__(game)
         self.mouse_downs = {
@@ -115,14 +122,17 @@ class PauseMenuControls(Controls):
         }
 
     def activate_selection(self, button, value):
+        # activates a button
         self.set_click_map(button, value)
         self.game.game_state_manager.current_state().activate_selection()
 
     def set_click_map(self, button, value):
+        # sets click map
         self.mouse_downs[button] = value
 
 
 class GameOverMenuControls(Controls):
+    """Game over menu controls."""
     def __init__(self, game):
         super().__init__(game)
         self.mouse_downs = {
@@ -145,6 +155,7 @@ class GameOverMenuControls(Controls):
 
 
 class GameWinMenuControls(Controls):
+    """Game win menu controls."""
     def __init__(self, game):
         super().__init__(game)
         self.mouse_downs = {

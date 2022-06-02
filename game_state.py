@@ -407,6 +407,7 @@ class StartMenu(SelectionMenu):
         self.prev_mouse_pos = self.mouse_pos[0], self.mouse_pos[1]
         self.camera_acc = Vector2(0, 0)
         self.camera_vel = Vector2(0, 0)
+        # sets up start menu map
         self.background = pg.transform.scale(pg.image.load("assets/map/start_menu_map_0.png"), (self.game.window_size[0] * 3, self.game.window_size[1] * 3))
         self.game.screen.blit(self.background, (0, 0), (
             self.game.window_size[0] + self.camera_pos.x,
@@ -425,6 +426,7 @@ class StartMenu(SelectionMenu):
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] * 0.5, self.game.window_size[1] * 5/8), lambda: self.game.stop(),
                             [pg.image.load(f"assets/gui/button/quit/quit_{x}.png") for x in ["0", "1"]]),
         ]
+        # creates new level
         self.level_creator = LevelCreator(self, Vector2(1, 1))
         self.level_creator.level = self.level_creator.load_from_file('start_menu_level.txt')
         self.level_creator.load_stage()
@@ -437,6 +439,7 @@ class StartMenu(SelectionMenu):
         self.gui_sprites.update()
         self.camera_acc = Vector2(self.mouse_pos[0] - self.prev_mouse_pos[0],
                                   self.mouse_pos[1] - self.prev_mouse_pos[1])
+        # calculates camera shaking using an envelope
         if self.camera_acc.magnitude_squared() != 0:
             self.camera_acc = self.camera_acc.normalize()
         if self.camera_vel.x != 0:
@@ -454,7 +457,6 @@ class StartMenu(SelectionMenu):
         for sprite in self.all_sprites.sprites():
             sprite.pos -= self.camera_vel
         self.prev_mouse_pos = self.mouse_pos[0], self.mouse_pos[1]
-
 
     def render(self):
         """Renders all game objects."""
@@ -501,11 +503,13 @@ class PauseMenu(SelectionMenu):
         # set controls
         self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
         self.background.blit(self.game.screen, (0, 0))
+        # adds transprent background tint to the game
         tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
         tint.fill((0, 0, 0))
         tint.set_alpha(200)
         self.background.blit(tint, (0, 0))
         self.controls = controls.PauseMenuControls(self.game)
+        # adds pause menu buttons
         self.box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
                        pg.image.load("assets/gui/menu/pause_menu/pause_menu_base.png"))
         self.selections = [
@@ -518,6 +522,7 @@ class PauseMenu(SelectionMenu):
         ]
 
     def quit_to_menu(self):
+        # exits to the start menu
         self.game.game_state_manager.exit_state()
         self.game.game_state_manager.switch_state_from_pool("start_menu")
 
@@ -531,6 +536,7 @@ class GameOverMenu(SelectionMenu):
 
     def load(self):
         self.controls = controls.GameOverMenuControls(self.game)
+        # adds transparent background tint to the game
         self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
         self.background.blit(self.game.screen, (0, 0))
         tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
@@ -550,6 +556,7 @@ class GameOverMenu(SelectionMenu):
         ]
 
     def reset_game(self):
+        # resets game and deletes all sprites
         self.game.game_state_manager.exit_state()
         del self.game.game_state_manager.pool["playing"]
         self.game.game_state_manager.pool["playing"] = PlayingState(self.game, "playing")
@@ -565,16 +572,19 @@ class GameWinMenu(SelectionMenu):
 
     def load(self):
         self.controls = controls.GameWinMenuControls(self.game)
+        # adds transparnet background on top of previous game state
         self.background = pg.Surface(self.game.window_size, pg.SRCALPHA)
         self.background.blit(self.game.screen, (0, 0))
         tint = pg.Surface(self.game.window_size, pg.SRCALPHA)
         tint.fill((0, 0, 0))
         tint.set_alpha(200)
         self.background.blit(tint, (0, 0))
+        # adds game win menu box to indicate win
         self.box = Box(self, self.gui_sprites, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] / 2),
                        pg.image.load(f"assets/gui/menu/game_win_menu/game_win_menu.png"))
         self.game.screen.blit(self.background, (0, 0))
         pg.display.update(self.background.get_rect())
+        # ads buttons to the game win menu
         self.selections = [
             ClickableButton(self.gui_sprites, self, Vector2(self.game.window_size[0] / 2, self.game.window_size[1] * 18 / 25), lambda: self.reset_game(),
                              [pg.image.load(f"assets/gui/button/quit_to_menu/quit_to_menu_{x}.png") for x in
@@ -584,6 +594,7 @@ class GameWinMenu(SelectionMenu):
         ]
 
     def reset_game(self):
+        # resets game and deletes all sprites
         self.game.game_state_manager.exit_state()
         del self.game.game_state_manager.pool["playing"]
         self.game.game_state_manager.pool["playing"] = PlayingState(self.game, "playing")

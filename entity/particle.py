@@ -4,12 +4,14 @@ from entity.game_entity import Entity
 
 
 class Particle(Entity):
+    """ANimated game particle"""
     def __init__(self, group, game_state, pos, images, life_time):
         super().__init__(group, game_state, pos, images)
         self.life_time = life_time
 
 
 class WalkDust(Particle):
+    """Dust when player walks"""
     LIFE_TIME = 10
     RADIUS_MIN, RADIUS_MAX = 2, 8
     COLOR = (255, 255, 255, 120)
@@ -38,6 +40,7 @@ class WalkDust(Particle):
 
 
 class FireTrail(Particle):
+    """Fire trail for fireball."""
     LIFE_TIME = 8
     RADIUS_MIN, RADIUS_MAX = 2, 4
     COLORS = [
@@ -72,6 +75,7 @@ class FireTrail(Particle):
 
 
 class RootTrail(Particle):
+    """root trail for root"""
     LIFE_TIME = 12
     RADIUS_MIN, RADIUS_MAX = 4, 8
     COLORS = [
@@ -106,6 +110,7 @@ class RootTrail(Particle):
 
 
 class LavaParticle(Particle):
+    """lava particle for fountains"""
     LIFE_TIME = 90
     RADIUS_MIN, RADIUS_MAX = 4, 6
     COLORS = [
@@ -141,6 +146,7 @@ class LavaParticle(Particle):
 
 
 class HealthParticle(Particle):
+    """health particle when player gains health"""
     RADIUS_MIN, RADIUS_MAX = 2, 4
     COLORS = [
         (255, 0, 0),
