@@ -155,7 +155,7 @@ class PlayingState(GameState):
         self.tile_size = 64
         self.tile_dim = int(self.game.window_size[0] / self.tile_size), int(self.game.window_size[1] / self.tile_size)
         # game background
-        background_image = pg.image.load("assets/map/playing_state_map_1.png")
+        background_image = pg.image.load("assets/map/playing_state_map_0.png")
         self.background = pg.transform.scale(background_image,
                                              (background_image.get_width() * 4, background_image.get_height() * 4))
         self.on_camera_background = pg.Surface([self.shake_screen.get_width() + 2 * self.tile_size, self.shake_screen.get_height() + 2 * self.tile_size])
@@ -190,8 +190,8 @@ class PlayingState(GameState):
         self.controls = controls.PlayingControls(self.game)
 
         # example level
-        self.level = 1
-        self.level_creator.create_level(self.level_creator.load_from_file('level_1.txt'))
+        self.level = 0
+        self.level_creator.create_level(self.level_creator.load_from_file('level_0.txt'))
         self.player.ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
         self.player.secondary_ability = MeleeAbility(self.player, 100, [self.enemies], [self.enemies])
 
@@ -340,7 +340,6 @@ class PlayingState(GameState):
         rect = self.game.screen.blit(self.shake_screen, (self.camera_pos.x, self.camera_pos.y))
         pg.display.update(rect)
         if level == 1:
-            self.player.pos = Vector2(200, 200)
             self.camera_pos = Vector2(0, 0)
         for sprite in self.all_sprites.sprites():
             if not sprite in self.player_group.sprites():

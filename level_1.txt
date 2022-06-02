@@ -4,7 +4,7 @@
 #                       SSSSSSSS ##        S         S S           ##               #
 #                                           S           S          ##     R  SSSSS  #
 #          S                 H               S S   S S   S         ##       SSSSSS  #
-#                                               S S                ##        SSSSS  #
+#   P                                           S S                ##        SSSSS  #
 #                       SSSSSSSS ##              S                 ##               #
 #                                ##                                ##               #
 #                                ##                                ##               #
@@ -16,9 +16,9 @@
 #               ## S    S                SSS              SS                        #
 #               ## S                R   SSSSS                                S      #
 #               ## S                     SSS                                        #
-#               ## S             R        S                 SSSSSS ##     H     F   #
-#               ##                                     H            ##              #
-#               ##         H                                       ##               #
+#               ## S          R           S                 SSSSSS ##     H     F   #
+#               ##                                     H           ##               #
+#               ##       H                                         ##               #
 ##            #############################################################     #####
 ##            ####                                                 ########     #####
 ##            #############################################################     #####
@@ -35,8 +35,8 @@
 ##########################################################################   ########
 #               ##   A    A      ##  B B  B  B                         R            #
 #               ##  FF           ##                                           H     #
-#                   RR           ##H         F                                      #
-#    F              HH           ##                       FR       R                #
+#                   RR           ##  H       F                                      #
+#    F              HH           ##                   F     R       R               #
 #                   FF           ##     F                                           #
 #               ##  RR           ##          F                                      #
 #               ##  HH           ##                             R                   #
@@ -47,7 +47,7 @@
 #                                ##    S        F               R      R         R  #
 # SSF   FSSSSSSSSSSSSSSSSSSSSSSS ##  S S     S                                      #
 # S                                  S S    SS  S SS S            H        R        #
-# S F   F  F   F  F  F   F  F      P S SSS         S S       H               SSSSS  #
+# S F   F  F   F  F  F   F  F        S SSS         S S       H               SSSSS  #
 # S                                      S   H                        F        S S  #
 # SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS ##          SSSSS                             S S  #
 #                                ##             F      H       R      R             #
